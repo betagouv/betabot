@@ -24,6 +24,7 @@ RUN npm ci --omit=dev
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
+COPY src ./src
 COPY get-data.sh build-embeddings.ts ./
 
 # Create /data owned by the node user before dropping privileges
