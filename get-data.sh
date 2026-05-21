@@ -25,8 +25,20 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.m
 curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o data/calendar.ics
 
 mkdir -p data/index
-jq '[.[] | select(.missions[]?.end > "2026-05-20") | {fullname, competences, role, domaine}] | unique_by(.fullname)' ./data/API/members.json  > data/index/members.json
-jq '[.data[] | select(.attributes.phases | map(.name) | any(. == "abandon" or . ==  "abandon-investigation") | not) | {name: .attributes.name, description: .attributes.pitch}]' ./data/API/startups.json > data/index/startups.json
+
+TODAY=$(date +%Y-%m-%d)
+jq --arg today "$TODAY" '[.[] | select(.missions[]?.end > $today) | {id, fullname, competences, role, domaine}] | unique_by(.id)' ./data/API/members.json > data/index/members.json
+
+jq --slurpfile details data/API/startups_details.json '
+  [.data[]
+   | select(.attributes.phases | map(.name) | any(. == "abandon" or . == "abandon-investigation") | not)
+   | {
+       id: .id,
+       name: .attributes.name,
+       description: .attributes.pitch,
+       active_member_count: (($details[0][.id].active_members // []) | length)
+     }
+  ]' ./data/API/startups.json > data/index/startups.json
 
 
 cat > data/index/phases.txt << EOF

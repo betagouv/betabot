@@ -1,0 +1,30 @@
+{
+  "name": "betabot",
+  "version": "1.0.0",
+  "description": "Self-hosted bot for the beta.gouv.fr community",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --env-file=.env --import tsx src/index.ts",
+    "embed": "node --env-file=.env --import tsx build-embeddings.ts",
+    "start": "node --env-file=.env dist/src/index.js",
+    "cli": "node --env-file=.env --import tsx src/cli.ts"
+  },
+  "dependencies": {
+    "gray-matter": "^4",
+    "ical": "^0.8",
+    "matrix-js-sdk": "^34",
+    "openai": "^4",
+    "remark-frontmatter": "^5",
+    "remark-parse": "^11",
+    "remark-stringify": "^11",
+    "unified": "^11",
+    "wink-bm25-text-search": "^2"
+  },
+  "devDependencies": {
+    "@types/ical": "^0.8.3",
+    "@types/node": "^20",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
