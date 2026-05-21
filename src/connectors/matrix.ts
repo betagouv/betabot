@@ -34,12 +34,10 @@ export class MatrixConnector {
         baseUrl: homeserver!,
         userId: user!,
         accessToken,
-        usingExternalCrypto: true,
       });
     } else {
       this.client = createClient({
         baseUrl: homeserver!,
-        usingExternalCrypto: true,
       });
     }
 
