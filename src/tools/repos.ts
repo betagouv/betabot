@@ -68,6 +68,21 @@ async function get_repo_detail(
   return { ...overview, recent_commits: commits };
 }
 
+async function get_repo_changelog(
+  org: string,
+  repo: string
+): Promise<string | null> {
+  const changelogPath = path.join(DATA, "gitscan/repos", org, repo, "CHANGELOG-generated.md");
+  if (!fs.existsSync(changelogPath)) return null;
+  return fs.readFileSync(changelogPath, "utf-8");
+}
+
+async function get_org_changelog(org: string): Promise<string | null> {
+  const changelogPath = path.join(DATA, "gitscan/repos", org, "CHANGELOG-generated.md");
+  if (!fs.existsSync(changelogPath)) return null;
+  return fs.readFileSync(changelogPath, "utf-8");
+}
+
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
 const searchReposTool: ChatCompletionTool = {
@@ -118,7 +133,49 @@ const getRepoDetailTool: ChatCompletionTool = {
   },
 };
 
-export const tools = [searchReposTool, getRepoDetailTool];
+const getRepoChangelogTool: ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "get_repo_changelog",
+    description:
+      "Retourne le changelog généré (CHANGELOG-generated.md) d'un dépôt spécifique, ou null s'il n'existe pas.",
+    parameters: {
+      type: "object",
+      properties: {
+        org: {
+          type: "string",
+          description: "Organisation GitHub (ex: betagouv)",
+        },
+        repo: {
+          type: "string",
+          description: "Nom du dépôt",
+        },
+      },
+      required: ["org", "repo"],
+    },
+  },
+};
+
+const getOrgChangelogTool: ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "get_org_changelog",
+    description:
+      "Retourne le changelog généré (CHANGELOG-generated.md) d'une organisation GitHub entière, ou null s'il n'existe pas.",
+    parameters: {
+      type: "object",
+      properties: {
+        org: {
+          type: "string",
+          description: "Organisation GitHub (ex: betagouv)",
+        },
+      },
+      required: ["org"],
+    },
+  },
+};
+
+export const tools = [searchReposTool, getRepoDetailTool, getRepoChangelogTool, getOrgChangelogTool];
 
 export const handlers: Record<
   string,
@@ -128,4 +185,8 @@ export const handlers: Record<
     search_repos(args["query"] as string, (args["top_k"] as number) ?? 10),
   get_repo_detail: (args) =>
     get_repo_detail(args["org"] as string, args["repo"] as string),
+  get_repo_changelog: (args) =>
+    get_repo_changelog(args["org"] as string, args["repo"] as string),
+  get_org_changelog: (args) =>
+    get_org_changelog(args["org"] as string),
 };

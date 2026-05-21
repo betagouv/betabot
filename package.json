@@ -15,14 +15,16 @@
     "get-data": "sh get-data.sh"
   },
   "dependencies": {
-    "tsx": "^4",
+    "esbuild-wasm": "^0.28.0",
     "gray-matter": "^4",
     "ical": "^0.8",
+    "marked": "^18.0.4",
     "matrix-js-sdk": "^34",
     "openai": "^4",
     "remark-frontmatter": "^5",
     "remark-parse": "^11",
     "remark-stringify": "^11",
+    "tsx": "^4",
     "unified": "^11",
     "wink-bm25-text-search": "^2"
   },
@@ -30,5 +32,8 @@
     "@types/ical": "^0.8.3",
     "@types/node": "^20",
     "typescript": "^5"
+  },
+  "overrides": {
+    "esbuild": "npm:esbuild-wasm@~0.28.0"
   }
 }

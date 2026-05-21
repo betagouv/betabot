@@ -34,6 +34,8 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.m
 
 curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o "$DATA_DIR/calendar.ics"
 
+curl "https://betagouv.github.io/beta.gouv.fr/startups.html" -o "$DATA_DIR/startups-changelog.html"
+
 mkdir -p "$DATA_DIR/index"
 
 TODAY=$(date +%Y-%m-%d)

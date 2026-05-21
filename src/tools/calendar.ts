@@ -14,7 +14,7 @@ interface CalendarEvent {
   description?: string;
 }
 
-async function get_calendar(days_ahead = 14): Promise<CalendarEvent[]> {
+async function get_calendar(days_ahead = 14, days_back = 0): Promise<CalendarEvent[]> {
   const icsPath = path.join(DATA, "calendar.ics");
   if (!fs.existsSync(icsPath)) return [];
 
@@ -22,7 +22,8 @@ async function get_calendar(days_ahead = 14): Promise<CalendarEvent[]> {
   const parsed = ical.parseICS(raw);
 
   const now = new Date();
-  const limit = new Date(now.getTime() + days_ahead * 24 * 60 * 60 * 1000);
+  const from = new Date(now.getTime() - days_back * 24 * 60 * 60 * 1000);
+  const to = new Date(now.getTime() + days_ahead * 24 * 60 * 60 * 1000);
 
   const events: CalendarEvent[] = [];
 
@@ -32,7 +33,7 @@ async function get_calendar(days_ahead = 14): Promise<CalendarEvent[]> {
     const start = component.start ? new Date(component.start) : null;
     const end = component.end ? new Date(component.end) : null;
 
-    if (!start || start < now || start > limit) continue;
+    if (!start || start < from || start > to) continue;
 
     events.push({
       summary: component.summary ?? "(sans titre)",
@@ -58,7 +59,7 @@ const getCalendarTool: ChatCompletionTool = {
   function: {
     name: "get_calendar",
     description:
-      "Retourne les prochains événements de la communauté beta.gouv.fr.",
+      "Retourne les événements du calendrier de la communauté beta.gouv.fr, à venir ou passés.",
     parameters: {
       type: "object",
       properties: {
@@ -66,6 +67,11 @@ const getCalendarTool: ChatCompletionTool = {
           type: "integer",
           description: "Nombre de jours à venir (défaut: 14)",
           default: 14,
+        },
+        days_back: {
+          type: "integer",
+          description: "Nombre de jours dans le passé à inclure (défaut: 0)",
+          default: 0,
         },
       },
     },
@@ -79,5 +85,5 @@ export const handlers: Record<
   (args: Record<string, unknown>) => Promise<unknown>
 > = {
   get_calendar: (args) =>
-    get_calendar((args["days_ahead"] as number) ?? 14),
+    get_calendar((args["days_ahead"] as number) ?? 14, (args["days_back"] as number) ?? 0),
 };
