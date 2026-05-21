@@ -23,6 +23,10 @@ import {
   tools as videoTools,
   handlers as videoHandlers,
 } from "./tools/videos.js";
+import {
+  tools as pageTools,
+  handlers as pageHandlers,
+} from "./tools/pages.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -45,6 +49,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...docTools,
   ...calendarTools,
   ...videoTools,
+  ...pageTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -57,6 +62,7 @@ const ALL_HANDLERS: Record<
   ...docHandlers,
   ...calendarHandlers,
   ...videoHandlers,
+  ...pageHandlers,
 };
 
 export class Orchestrator {

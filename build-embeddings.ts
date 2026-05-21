@@ -57,6 +57,13 @@ interface StartupChunk {
   isFrontmatter: boolean;
 }
 
+interface PageChunk {
+  path: string;
+  title: string;
+  breadcrumb: string;
+  excerpt: string;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function excerpt(text: string, maxLen = 200): string {
@@ -71,10 +78,33 @@ function writeJson(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// ─── HTML → text helper ───────────────────────────────────────────────────────
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, inner) => `\n# ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, inner) => `\n## ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
+    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, inner) => `\n### ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
+    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, inner) => `\n#### ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // ─── Job 1: Members ───────────────────────────────────────────────────────────
 
 async function buildMembersEmbeddings() {
-  console.log("\n[1/5] Building members embeddings…");
+  console.log("\n[1/6] Building members embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/members.embeddings.bin"))) return;
   const members = readJson<MemberEntry[]>(
     path.join(DATA_DIR, "index/members.json")
@@ -99,7 +129,7 @@ async function buildMembersEmbeddings() {
 // ─── Job 2: Startups index ───────────────────────────────────────────────────
 
 async function buildStartupsEmbeddings() {
-  console.log("\n[2/5] Building startups index embeddings…");
+  console.log("\n[2/6] Building startups index embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/startups.embeddings.bin"))) return;
   const startups = readJson<StartupEntry[]>(
     path.join(DATA_DIR, "index/startups.json")
@@ -118,7 +148,7 @@ async function buildStartupsEmbeddings() {
 // ─── Job 3: Gitscan repos ────────────────────────────────────────────────────
 
 async function buildReposEmbeddings() {
-  console.log("\n[3/5] Building gitscan repos embeddings…");
+  console.log("\n[3/6] Building gitscan repos embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "gitscan/repos.embeddings.bin"))) return;
   const reposDir = path.join(DATA_DIR, "gitscan/repos");
   const entries: RepoEntry[] = [];
@@ -191,7 +221,7 @@ async function buildReposEmbeddings() {
 // ─── Job 4: Docs ─────────────────────────────────────────────────────────────
 
 async function buildDocsEmbeddings() {
-  console.log("\n[4/5] Building docs embeddings…");
+  console.log("\n[4/6] Building docs embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "doc.incubateur.net/docs.embeddings.bin"))) return;
   const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
   const chunks: DocChunk[] = [];
@@ -269,7 +299,7 @@ async function buildDocsEmbeddings() {
 // ─── Job 5: Startup pages ────────────────────────────────────────────────────
 
 async function buildStartupPagesEmbeddings() {
-  console.log("\n[5/5] Building startup pages embeddings…");
+  console.log("\n[5/6] Building startup pages embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "beta.gouv.fr/startups.embeddings.bin"))) return;
   const startupsDir = path.join(
     DATA_DIR,
@@ -351,6 +381,97 @@ async function buildStartupPagesEmbeddings() {
   console.log(`  ✓ ${chunks.length} startup page chunks embedded`);
 }
 
+// ─── Job 6: beta.gouv.fr pages ───────────────────────────────────────────────
+
+async function buildPagesEmbeddings() {
+  console.log("\n[6/6] Building beta.gouv.fr pages embeddings…");
+  const pagesOutputBin = path.join(DATA_DIR, "beta.gouv.fr/pages.embeddings.bin");
+  if (shouldSkip(pagesOutputBin)) return;
+
+  const pagesDir = path.join(DATA_DIR, "beta.gouv.fr/_pages");
+  if (!fs.existsSync(pagesDir)) {
+    console.log("  ⚠ _pages directory not found, skipping");
+    return;
+  }
+
+  const chunks: PageChunk[] = [];
+  const texts: string[] = [];
+
+  function walkDir(dir: string) {
+    for (const entry of fs.readdirSync(dir)) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walkDir(fullPath);
+      } else if (entry.endsWith(".md")) {
+        processPageFile(fullPath);
+      }
+    }
+  }
+
+  function processPageFile(filePath: string) {
+    const relativePath = path.relative(pagesDir, filePath);
+    let raw: string;
+    try {
+      raw = fs.readFileSync(filePath, "utf-8");
+    } catch {
+      return;
+    }
+
+    const { data: fm } = parseFrontmatter(raw);
+    const pageTitle =
+      (fm["title"] as string | undefined) ??
+      path.basename(filePath, ".md");
+
+    // Convert HTML to plain text with markdown headings so extractSections can split properly
+    const cleaned = htmlToText(raw);
+
+    const beforeCount = chunks.length;
+    const sections = extractSections(cleaned);
+    for (const section of sections) {
+      if (section.content.length < 30) continue;
+      chunks.push({
+        path: relativePath,
+        title: pageTitle,
+        breadcrumb: `${pageTitle} > ${section.breadcrumb}`,
+        excerpt: excerpt(section.content),
+      });
+      texts.push(`[${pageTitle} > ${section.breadcrumb}]\n${section.content}`);
+    }
+
+    // Fall back to a single full-body chunk if no sections were extracted
+    if (chunks.length === beforeCount) {
+      const { body } = parseFrontmatter(cleaned);
+      const bodyText = body.trim();
+      if (bodyText.length >= 30) {
+        chunks.push({
+          path: relativePath,
+          title: pageTitle,
+          breadcrumb: pageTitle,
+          excerpt: excerpt(bodyText),
+        });
+        texts.push(`[${pageTitle}]\n${bodyText}`);
+      }
+    }
+  }
+
+  walkDir(pagesDir);
+
+  if (texts.length === 0) {
+    console.log("  ⚠ No page files found, skipping");
+    return;
+  }
+
+  const vecs = await embedBatch(texts);
+  saveBin(vecs, pagesOutputBin);
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(DATA_DIR, "beta.gouv.fr/pages.bm25.json"));
+  writeJson(path.join(DATA_DIR, "beta.gouv.fr/pages.index.json"), chunks);
+
+  console.log(`  ✓ ${chunks.length} page chunks embedded`);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -363,6 +484,7 @@ async function main() {
   await buildReposEmbeddings();
   await buildDocsEmbeddings();
   await buildStartupPagesEmbeddings();
+  await buildPagesEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);
