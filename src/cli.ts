@@ -31,6 +31,7 @@ rl.on("line", async (line) => {
       text,
     });
     console.log(`\nbetabot > ${response}\n`);
+    orchestrator.clearHistory("cli");
   } catch (err) {
     console.error("Erreur:", err);
   }

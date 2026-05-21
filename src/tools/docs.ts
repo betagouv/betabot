@@ -26,13 +26,13 @@ async function ensureLoaded() {
   matrix = loadBin(path.join(DOCS_DIR, "docs.embeddings.bin"), DIMS);
   bm25 = await loadBM25Index(path.join(DOCS_DIR, "docs.bm25.json"));
   indexEntries = JSON.parse(
-    fs.readFileSync(path.join(DOCS_DIR, "docs.index.json"), "utf-8")
+    fs.readFileSync(path.join(DOCS_DIR, "docs.index.json"), "utf-8"),
   ) as DocChunk[];
 }
 
 async function search_docs(
   query: string,
-  top_k = 5
+  top_k = 5,
 ): Promise<Array<DocChunk & { score: number }>> {
   await ensureLoaded();
   const queryVec = await embedText(query);
@@ -43,7 +43,7 @@ async function search_docs(
     bm25,
     indexEntries!,
     DIMS,
-    top_k
+    top_k,
   );
 }
 
@@ -65,7 +65,7 @@ const searchDocsTool: ChatCompletionTool = {
   function: {
     name: "search_docs",
     description:
-      "Recherche dans la documentation de la communauté beta.gouv.fr (doc.incubateur.net).",
+      "Recherche dans la documentation de la communauté beta.gouv.fr (doc.incubateur.net). Utilise get_doc_page pour récupérer le contenu complet d'un résultat. Methodologie, Culture, Processes, Marchés, Services et outils...",
     parameters: {
       type: "object",
       properties: {
@@ -90,14 +90,14 @@ const getDocPageTool: ChatCompletionTool = {
   function: {
     name: "get_doc_page",
     description:
-      "Récupère le contenu complet d'une page de documentation par son chemin relatif.",
+      "Récupère le contenu complet d'une page de documentation doc.incubateur.net par son chemin relatif. À utiliser UNIQUEMENT avec les chemins retournés par search_docs.",
     parameters: {
       type: "object",
       properties: {
         path: {
           type: "string",
           description:
-            "Chemin relatif de la page, issu de search_docs (ex: gerer-son-produit/README.md)",
+            "Chemin relatif retourné par search_docs (ex: gerer-son-produit/README.md)",
         },
       },
       required: ["path"],

@@ -5,10 +5,19 @@ mkdir -p data/API
 curl https://beta.gouv.fr/api/v2.6/authors.json -o data/API/members.json
 curl https://beta.gouv.fr/api/v2.6/startups.json -o data/API/startups.json
 curl https://beta.gouv.fr/api/v2.6/startups_details.json -o data/API/startups_details.json
+curl https://beta.gouv.fr/api/v2.6/incubators.json -o data/API/incubators.json
 
-git clone https://github.com/betagouv/gitscan --depth=1 data/gitscan
-git clone https://github.com/betagouv/beta.gouv.fr --depth=500 data/beta.gouv.fr
-git clone https://github.com/betagouv/doc.incubateur.net-communaute --depth=500 data/doc.incubateur.net
+if [ -d data/gitscan ]; then
+  git -C data/gitscan pull
+else
+  git clone https://github.com/betagouv/gitscan --depth=1 data/gitscan
+fi
+
+if [ -d data/doc.incubateur.net ]; then
+  git -C data/doc.incubateur.net pull
+else
+  git clone https://github.com/betagouv/doc.incubateur.net-communaute --depth=500 data/doc.incubateur.net
+fi
 
 
 mkdir -p data/peertube
@@ -39,6 +48,8 @@ jq --slurpfile details data/API/startups_details.json '
        active_member_count: (($details[0][.id].active_members // []) | length)
      }
   ]' ./data/API/startups.json > data/index/startups.json
+
+jq '[to_entries[] | {id: .key, title: .value.title, contact: .value.contact, website: .value.website, github: .value.github, startup_count: (.value.startups | length)}]' data/API/incubators.json > data/index/incubators.json
 
 
 cat > data/index/phases.txt << EOF

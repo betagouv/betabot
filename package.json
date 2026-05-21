@@ -8,7 +8,10 @@
     "dev": "node --env-file=.env --import tsx src/index.ts",
     "embed": "node --env-file=.env --import tsx build-embeddings.ts",
     "start": "node --env-file=.env dist/src/index.js",
-    "cli": "node --env-file=.env --import tsx src/cli.ts"
+    "cli": "node --env-file=.env --import tsx src/cli.ts",
+    "eval": "node --env-file=.env --import tsx evals/run.ts",
+    "eval:generate": "node --env-file=.env --import tsx evals/generate.ts",
+    "eval:report": "node --import tsx evals/report.ts"
   },
   "dependencies": {
     "gray-matter": "^4",

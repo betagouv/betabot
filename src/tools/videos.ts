@@ -2,14 +2,25 @@ import fs from "fs";
 import path from "path";
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
+import { embedText, loadBin } from "../embed.js";
+import { loadBM25Index, hybridSearch } from "../search.js";
 
 const DATA = config.dataDir;
+const PEERTUBE_DIR = path.join(DATA, "peertube");
+const DIMS = config.openai.embedDims;
 
 interface Video {
   title: string;
   date: string;
   url: string;
   channel: string;
+}
+
+interface VideoChunk {
+  title: string;
+  channel: string;
+  url: string;
+  date: string;
 }
 
 interface PeertubeItem {
@@ -25,11 +36,33 @@ interface PeertubeChannel {
   items?: PeertubeItem[];
 }
 
-async function get_videos(channel?: string): Promise<Video[]> {
-  const peertubeDir = path.join(DATA, "peertube");
-  if (!fs.existsSync(peertubeDir)) return [];
+// Lazy-loaded search indices
+let matrix: Float32Array | null = null;
+let bm25: unknown = null;
+let indexEntries: VideoChunk[] | null = null;
 
-  const files = fs.readdirSync(peertubeDir).filter((f) => f.endsWith(".json"));
+async function ensureLoaded() {
+  if (matrix) return;
+  matrix = loadBin(path.join(PEERTUBE_DIR, "videos.embeddings.bin"), DIMS);
+  bm25 = await loadBM25Index(path.join(PEERTUBE_DIR, "videos.bm25.json"));
+  indexEntries = JSON.parse(
+    fs.readFileSync(path.join(PEERTUBE_DIR, "videos.index.json"), "utf-8"),
+  ) as VideoChunk[];
+}
+
+async function search_videos(
+  query: string,
+  top_k = 5,
+): Promise<Array<VideoChunk & { score: number }>> {
+  await ensureLoaded();
+  const queryVec = await embedText(query);
+  return hybridSearch(query, queryVec, matrix!, bm25, indexEntries!, DIMS, top_k);
+}
+
+async function get_videos(channel?: string): Promise<Video[]> {
+  if (!fs.existsSync(PEERTUBE_DIR)) return [];
+
+  const files = fs.readdirSync(PEERTUBE_DIR).filter((f) => f.endsWith(".json") && f !== "videos.index.json");
   const channelFiles = channel
     ? files.filter((f) => f === `${channel}.json`)
     : files;
@@ -41,13 +74,13 @@ async function get_videos(channel?: string): Promise<Video[]> {
     let feed: PeertubeChannel;
     try {
       feed = JSON.parse(
-        fs.readFileSync(path.join(peertubeDir, file), "utf-8")
+        fs.readFileSync(path.join(PEERTUBE_DIR, file), "utf-8"),
       ) as PeertubeChannel;
     } catch {
       continue;
     }
 
-    const items = (feed.items ?? []).slice(0, 10);
+    const items = (feed.items ?? []).slice(0, 25);
     for (const item of items) {
       results.push({
         title: item.title ?? "(sans titre)",
@@ -59,13 +92,38 @@ async function get_videos(channel?: string): Promise<Video[]> {
   }
 
   results.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
   return results;
 }
 
-// ─── Tool definition ──────────────────────────────────────────────────────────
+// ─── Tool definitions ─────────────────────────────────────────────────────────
+
+const searchVideosTool: ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "search_videos",
+    description:
+      "Recherche des vidéos PeerTube de la communauté beta.gouv.fr par sujet, titre ou chaîne via recherche hybride (sémantique + mots-clés).",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "Requête en langage naturel, ex: 'bluehats accessibilité', 'retour d'expérience produit'",
+        },
+        top_k: {
+          type: "integer",
+          description: "Nombre de résultats (défaut: 5)",
+          default: 5,
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
 
 const getVideosTool: ChatCompletionTool = {
   type: "function",
@@ -86,12 +144,13 @@ const getVideosTool: ChatCompletionTool = {
   },
 };
 
-export const tools = [getVideosTool];
+export const tools = [searchVideosTool, getVideosTool];
 
 export const handlers: Record<
   string,
   (args: Record<string, unknown>) => Promise<unknown>
 > = {
-  get_videos: (args) =>
-    get_videos(args["channel"] as string | undefined),
+  search_videos: (args) =>
+    search_videos(args["query"] as string, (args["top_k"] as number) ?? 5),
+  get_videos: (args) => get_videos(args["channel"] as string | undefined),
 };

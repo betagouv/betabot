@@ -49,19 +49,52 @@ interface DocChunk {
   excerpt: string;
 }
 
-interface StartupChunk {
-  slug: string;
+interface IncubatorEntry {
+  id: string;
   title: string;
-  breadcrumb: string;
-  excerpt: string;
-  isFrontmatter: boolean;
+  contact: string;
+  website: string | null;
+  github: string | null;
+  startup_count: number;
+  startups_summary: string;
 }
 
-interface PageChunk {
-  path: string;
+interface RawIncubatorStartup {
+  id: string;
+  name: string;
+  pitch: string;
+  repository: string | null;
+  contact: string;
+  phases: Array<{ name: string; start: string }>;
+}
+
+interface RawIncubator {
   title: string;
-  breadcrumb: string;
-  excerpt: string;
+  owner: string;
+  contact: string;
+  address: string | null;
+  website: string | null;
+  github: string | null;
+  startups: RawIncubatorStartup[];
+}
+
+interface VideoChunk {
+  title: string;
+  channel: string;
+  url: string;
+  date: string;
+}
+
+interface PeertubeItem {
+  id: string;
+  url: string;
+  title: string;
+  date_published?: string;
+  date_modified?: string;
+}
+
+interface PeertubeChannel {
+  items?: PeertubeItem[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -76,29 +109,6 @@ function readJson<T>(filePath: string): T {
 
 function writeJson(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-}
-
-// ─── HTML → text helper ───────────────────────────────────────────────────────
-
-function htmlToText(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, inner) => `\n# ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
-    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, inner) => `\n## ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
-    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, inner) => `\n### ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
-    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, inner) => `\n#### ${inner.replace(/<[^>]+>/g, "").trim()}\n`)
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 // ─── Job 1: Members ───────────────────────────────────────────────────────────
@@ -296,180 +306,104 @@ async function buildDocsEmbeddings() {
   console.log(`  ✓ ${chunks.length} doc chunks embedded`);
 }
 
-// ─── Job 5: Startup pages ────────────────────────────────────────────────────
+// ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
 
-async function buildStartupPagesEmbeddings() {
-  console.log("\n[5/6] Building startup pages embeddings…");
-  if (shouldSkip(path.join(DATA_DIR, "beta.gouv.fr/startups.embeddings.bin"))) return;
-  const startupsDir = path.join(
-    DATA_DIR,
-    "beta.gouv.fr/content/_startups"
-  );
-  const chunks: StartupChunk[] = [];
-  const texts: string[] = [];
+async function buildVideosEmbeddings() {
+  console.log("\n[5/6] Building PeerTube videos embeddings…");
+  const peertubeDir = path.join(DATA_DIR, "peertube");
+  const outputBin = path.join(peertubeDir, "videos.embeddings.bin");
+  if (shouldSkip(outputBin)) return;
+
+  if (!fs.existsSync(peertubeDir)) {
+    console.log("  ⚠ peertube directory not found, skipping");
+    return;
+  }
 
   const files = fs
-    .readdirSync(startupsDir)
-    .filter((f) => f.endsWith(".md"));
+    .readdirSync(peertubeDir)
+    .filter((f) => f.endsWith(".json") && f !== "videos.index.json");
 
-  for (const file of files) {
-    const slug = path.basename(file, ".md");
-    const content = fs.readFileSync(
-      path.join(startupsDir, file),
-      "utf-8"
-    );
-
-    const { data: fm } = parseFrontmatter(content);
-    const title = (fm["title"] as string | undefined) ?? slug;
-    const mission = (fm["mission"] as string | undefined) ?? "";
-    const incubator = (fm["incubator"] as string | undefined) ?? "";
-    const phases = (
-      fm["phases"] as Array<{ name: string }> | undefined ?? []
-    )
-      .map((p) => p.name)
-      .join(" → ");
-
-    // Front matter chunk
-    const fmText =
-      `[${slug}] ${title} — mission: ${mission}. ` +
-      `incubateur: ${incubator}. phases: ${phases}`;
-    chunks.push({
-      slug,
-      title,
-      breadcrumb: slug,
-      excerpt: excerpt(fmText),
-      isFrontmatter: true,
-    });
-    texts.push(fmText);
-
-    // Body section chunks
-    const sections = extractSections(content);
-    for (const section of sections) {
-      if (section.content.length < 30) continue;
-      chunks.push({
-        slug,
-        title,
-        breadcrumb: `${slug} > ${section.breadcrumb}`,
-        excerpt: excerpt(section.content),
-        isFrontmatter: false,
-      });
-      texts.push(`[${slug} > ${section.breadcrumb}]\n${section.content}`);
-    }
-  }
-
-  if (texts.length === 0) {
-    console.log("  ⚠ No startup files found, skipping");
-    return;
-  }
-
-  const vecs = await embedBatch(texts);
-  saveBin(
-    vecs,
-    path.join(DATA_DIR, "beta.gouv.fr/startups.embeddings.bin")
-  );
-
-  const bm25 = await buildBM25Index(texts);
-  saveBM25Index(
-    bm25,
-    path.join(DATA_DIR, "beta.gouv.fr/startups.bm25.json")
-  );
-  writeJson(
-    path.join(DATA_DIR, "beta.gouv.fr/startups.index.json"),
-    chunks
-  );
-
-  console.log(`  ✓ ${chunks.length} startup page chunks embedded`);
-}
-
-// ─── Job 6: beta.gouv.fr pages ───────────────────────────────────────────────
-
-async function buildPagesEmbeddings() {
-  console.log("\n[6/6] Building beta.gouv.fr pages embeddings…");
-  const pagesOutputBin = path.join(DATA_DIR, "beta.gouv.fr/pages.embeddings.bin");
-  if (shouldSkip(pagesOutputBin)) return;
-
-  const pagesDir = path.join(DATA_DIR, "beta.gouv.fr/_pages");
-  if (!fs.existsSync(pagesDir)) {
-    console.log("  ⚠ _pages directory not found, skipping");
-    return;
-  }
-
-  const chunks: PageChunk[] = [];
+  const chunks: VideoChunk[] = [];
   const texts: string[] = [];
 
-  function walkDir(dir: string) {
-    for (const entry of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, entry);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.endsWith(".md")) {
-        processPageFile(fullPath);
-      }
-    }
-  }
-
-  function processPageFile(filePath: string) {
-    const relativePath = path.relative(pagesDir, filePath);
-    let raw: string;
+  for (const file of files) {
+    const channelName = path.basename(file, ".json");
+    let feed: PeertubeChannel;
     try {
-      raw = fs.readFileSync(filePath, "utf-8");
+      feed = readJson<PeertubeChannel>(path.join(peertubeDir, file));
     } catch {
-      return;
+      continue;
     }
 
-    const { data: fm } = parseFrontmatter(raw);
-    const pageTitle =
-      (fm["title"] as string | undefined) ??
-      path.basename(filePath, ".md");
-
-    // Convert HTML to plain text with markdown headings so extractSections can split properly
-    const cleaned = htmlToText(raw);
-
-    const beforeCount = chunks.length;
-    const sections = extractSections(cleaned);
-    for (const section of sections) {
-      if (section.content.length < 30) continue;
-      chunks.push({
-        path: relativePath,
-        title: pageTitle,
-        breadcrumb: `${pageTitle} > ${section.breadcrumb}`,
-        excerpt: excerpt(section.content),
-      });
-      texts.push(`[${pageTitle} > ${section.breadcrumb}]\n${section.content}`);
-    }
-
-    // Fall back to a single full-body chunk if no sections were extracted
-    if (chunks.length === beforeCount) {
-      const { body } = parseFrontmatter(cleaned);
-      const bodyText = body.trim();
-      if (bodyText.length >= 30) {
-        chunks.push({
-          path: relativePath,
-          title: pageTitle,
-          breadcrumb: pageTitle,
-          excerpt: excerpt(bodyText),
-        });
-        texts.push(`[${pageTitle}]\n${bodyText}`);
-      }
+    for (const item of feed.items ?? []) {
+      const title = item.title ?? "(sans titre)";
+      const url = item.url ?? item.id ?? "";
+      const date = item.date_published ?? "";
+      chunks.push({ title, channel: channelName, url, date });
+      texts.push(`[${channelName}] ${title}`);
     }
   }
-
-  walkDir(pagesDir);
 
   if (texts.length === 0) {
-    console.log("  ⚠ No page files found, skipping");
+    console.log("  ⚠ No videos found, skipping");
     return;
   }
 
   const vecs = await embedBatch(texts);
-  saveBin(vecs, pagesOutputBin);
+  saveBin(vecs, outputBin);
 
   const bm25 = await buildBM25Index(texts);
-  saveBM25Index(bm25, path.join(DATA_DIR, "beta.gouv.fr/pages.bm25.json"));
-  writeJson(path.join(DATA_DIR, "beta.gouv.fr/pages.index.json"), chunks);
+  saveBM25Index(bm25, path.join(peertubeDir, "videos.bm25.json"));
+  writeJson(path.join(peertubeDir, "videos.index.json"), chunks);
 
-  console.log(`  ✓ ${chunks.length} page chunks embedded`);
+  console.log(`  ✓ ${chunks.length} videos embedded`);
+}
+
+// ─── Job 6: Incubators ───────────────────────────────────────────────────────
+
+async function buildIncubatorsEmbeddings() {
+  console.log("\n[6/6] Building incubators embeddings…");
+  const outputBin = path.join(DATA_DIR, "API/incubators.embeddings.bin");
+  if (shouldSkip(outputBin)) return;
+
+  const raw = readJson<Record<string, RawIncubator>>(
+    path.join(DATA_DIR, "API/incubators.json")
+  );
+
+  const entries: IncubatorEntry[] = [];
+  const texts: string[] = [];
+
+  for (const [id, incubator] of Object.entries(raw)) {
+    const startupNames = incubator.startups
+      .slice(0, 10)
+      .map((s) => s.name)
+      .join(", ");
+    const summary =
+      incubator.startups.length > 10
+        ? `${startupNames}… (${incubator.startups.length} startups)`
+        : startupNames;
+
+    entries.push({
+      id,
+      title: incubator.title,
+      contact: incubator.contact,
+      website: incubator.website,
+      github: incubator.github,
+      startup_count: incubator.startups.length,
+      startups_summary: summary,
+    });
+
+    texts.push(`${incubator.title} — startups: ${summary}`);
+  }
+
+  const vecs = await embedBatch(texts);
+  saveBin(vecs, outputBin);
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(DATA_DIR, "API/incubators.bm25.json"));
+  writeJson(path.join(DATA_DIR, "API/incubators.index.json"), entries);
+
+  console.log(`  ✓ ${entries.length} incubators embedded`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -483,8 +417,8 @@ async function main() {
   await buildStartupsEmbeddings();
   await buildReposEmbeddings();
   await buildDocsEmbeddings();
-  await buildStartupPagesEmbeddings();
-  await buildPagesEmbeddings();
+  await buildVideosEmbeddings();
+  await buildIncubatorsEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);

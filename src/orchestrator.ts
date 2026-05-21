@@ -24,9 +24,9 @@ import {
   handlers as videoHandlers,
 } from "./tools/videos.js";
 import {
-  tools as pageTools,
-  handlers as pageHandlers,
-} from "./tools/pages.js";
+  tools as incubatorTools,
+  handlers as incubatorHandlers,
+} from "./tools/incubators.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -37,10 +37,11 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - une startup, une produit, une équipe, créé un lien vers https://beta.gouv.fr/startups/[ghid]
  - un membre de la communauté, créé un lien vers https://espace-membre.beta.gouv.fr/community/[username]
  - un repository, créé un lien vers https://github.com/[ORG]/[REPO]
+ - la documentation, crée un lien vers https://doc.incubateur.net/[PATH] sans le suffixe \`.md\`.
 `;
 
 const MAX_HISTORY = 20;
-const MAX_TOOL_ITERATIONS = 5;
+const MAX_TOOL_ITERATIONS = 10;
 
 const ALL_TOOLS: ChatCompletionTool[] = [
   ...memberTools,
@@ -49,7 +50,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...docTools,
   ...calendarTools,
   ...videoTools,
-  ...pageTools,
+  ...incubatorTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -62,7 +63,7 @@ const ALL_HANDLERS: Record<
   ...docHandlers,
   ...calendarHandlers,
   ...videoHandlers,
-  ...pageHandlers,
+  ...incubatorHandlers,
 };
 
 export class Orchestrator {
@@ -91,6 +92,11 @@ export class Orchestrator {
     while (messages.length > MAX_HISTORY) {
       messages.shift();
     }
+  }
+
+  clearHistory(roomId: string, threadId?: string): void {
+    const key = this.getConversationKey(roomId, threadId);
+    this.history.delete(key);
   }
 
   async handle(input: {
