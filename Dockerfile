@@ -24,12 +24,15 @@ RUN npm ci --omit=dev
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
-COPY get-data.sh ./
+COPY get-data.sh build-embeddings.ts ./
 
-# Volume for runtime data (populated externally via get-data.sh + npm run embed)
-VOLUME ["/data"]
+# Create /data owned by the node user before dropping privileges
+RUN mkdir -p /data && chown node:node /data
 
 # Drop to non-root user
 USER node
+
+# Volume for runtime data (populated externally via get-data.sh + npm run embed)
+VOLUME ["/data"]
 
 CMD ["node", "dist/src/index.js"]
