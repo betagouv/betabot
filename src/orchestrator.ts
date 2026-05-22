@@ -173,10 +173,15 @@ export class Orchestrator {
         !assistantMessage.tool_calls?.length
       ) {
         const text = assistantMessage.content ?? "";
-        debug(`final response (${text.length} chars)`);
-        history.push({ role: "assistant", content: text });
-        this.trimHistory(history);
-        return text;
+        if (text.trim()) {
+          debug(`final response (${text.length} chars)`);
+          history.push({ role: "assistant", content: text });
+          this.trimHistory(history);
+          return text;
+        }
+        // LLM stopped but returned no content — ask it to summarize what it found
+        debug(`empty response after stop, requesting summary`);
+        break;
       }
 
       // Dispatch tool calls
