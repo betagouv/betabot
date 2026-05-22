@@ -199,7 +199,10 @@ export class MatrixConnector {
   }
 
   private isDMRoom(roomId: string): boolean {
-    return this.dmRooms.has(roomId);
+    if (this.dmRooms.has(roomId)) return true;
+    const room = this.client.getRoom(roomId);
+    if (!room) return false;
+    return room.getInvitedAndJoinedMemberCount() === 2;
   }
 
   private async sendMessage(
