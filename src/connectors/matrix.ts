@@ -186,6 +186,14 @@ export class MatrixConnector {
   }
 
   private isDMRoom(roomId: string): boolean {
+    // Prefer the explicit m.direct account data tag
+    const dmContent = this.client
+      .getAccountData("m.direct")
+      ?.getContent() as Record<string, string[]> | undefined;
+    if (dmContent && Object.values(dmContent).some((rooms) => rooms.includes(roomId))) {
+      return true;
+    }
+    // Fallback: 2-member room
     const room = this.client.getRoom(roomId);
     if (!room) return false;
     return room.getInvitedAndJoinedMemberCount() === 2;
