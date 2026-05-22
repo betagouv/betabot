@@ -47,12 +47,13 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - un repository ou commit GIT, créé un lien vers https://github.com/[ORG]/[REPO]
  - un organisation GIT, créé un lien vers https://github.com/[ORG]
  - la documentation, crée un lien vers https://doc.incubateur.net/[PATH] sans le suffixe \`.md\`.
- - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[catagorie]/[standard]
+ - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
 
 Cite toujours tes sources et lorsque c'est nécessaire tu peux ajouter ces liens en fin de message:
  - [documentation beta.gouv.fr](https://doc.incubateur.net)
  - [espace membre](https://espace-membre.beta.gouv.fr)
  - [site beta.gouv.fr](https://beta.gouv.fr)
+ - [standards des produits beta.gouv.fr](https://standards.beta.gouv.fr)
 `;
 
 const MAX_HISTORY = 20;
@@ -223,6 +224,11 @@ export class Orchestrator {
 
     // Fallback: ask LLM to summarize with what we have
     debug(`max iterations reached, requesting final summary`);
+    messages.push({
+      role: "user",
+      content:
+        "Réponds maintenant à la question en te basant uniquement sur les informations récupérées ci-dessus. Ne fais plus d'appel d'outil.",
+    });
     const finalResponse = await this.client.chat.completions.create({
       model: config.openai.model,
       messages,

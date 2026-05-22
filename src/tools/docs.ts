@@ -47,9 +47,10 @@ async function search_docs(
   );
 }
 
-async function get_doc_page(docPath: string): Promise<string | null> {
+async function get_doc_page(docPath: string): Promise<string> {
   const fullPath = path.join(DOCS_DIR, docPath);
-  if (!fs.existsSync(fullPath)) return null;
+  if (!fs.existsSync(fullPath))
+    return `Erreur: la page "${docPath}" n'existe pas. Utilise uniquement les chemins retournés par search_docs.`;
   const content = fs.readFileSync(fullPath, "utf-8");
   // Strip GitBook blocks for cleaner output
   return content
