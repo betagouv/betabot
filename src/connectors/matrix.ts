@@ -25,6 +25,7 @@ export class MatrixConnector {
   private ownUserId = "";
   private synced = false;
   private activeBotThreads = new Set<string>();
+  private dmRooms = new Set<string>();
 
   constructor(private orchestrator: Orchestrator) {
     const { homeserver, user, accessToken, password } = config.matrix;
@@ -63,7 +64,10 @@ export class MatrixConnector {
       if (member.membership !== "invite") return;
 
       const roomId = member.roomId;
-      console.log(`[Matrix] Invited to ${roomId}, joining…`);
+      const isDirect =
+        (event.getContent() as Record<string, unknown>).is_direct === true;
+      if (isDirect) this.dmRooms.add(roomId);
+      console.log(`[Matrix] Invited to ${roomId} isDirect=${isDirect}, joining…`);
 
       this.client
         .joinRoom(roomId)
@@ -176,7 +180,13 @@ export class MatrixConnector {
           })
           .then((response) => {
             console.log(`[Matrix] Sending response (${response.length} chars) to ${roomId}`);
-            void this.sendMessage(roomId, response, event.getId(), threadRoot);
+            // DMs don't use threads — send as plain reply
+            void this.sendMessage(
+              roomId,
+              response,
+              event.getId(),
+              isDM ? undefined : threadRoot
+            );
           })
           .catch((err: unknown) => {
             console.error("[Matrix] Orchestrator error:", err);
@@ -186,17 +196,7 @@ export class MatrixConnector {
   }
 
   private isDMRoom(roomId: string): boolean {
-    // Prefer the explicit m.direct account data tag
-    const dmContent = this.client
-      .getAccountData("m.direct")
-      ?.getContent() as Record<string, string[]> | undefined;
-    if (dmContent && Object.values(dmContent).some((rooms) => rooms.includes(roomId))) {
-      return true;
-    }
-    // Fallback: 2-member room
-    const room = this.client.getRoom(roomId);
-    if (!room) return false;
-    return room.getInvitedAndJoinedMemberCount() === 2;
+    return this.dmRooms.has(roomId);
   }
 
   private async sendMessage(
