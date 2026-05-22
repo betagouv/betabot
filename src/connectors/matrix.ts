@@ -100,6 +100,7 @@ export class MatrixConnector {
       RoomEvent.Timeline,
       (event, room, toStartOfTimeline) => {
         console.log(`[Matrix] Timeline event type=${event.getType()} sender=${event.getSender()} toStartOfTimeline=${toStartOfTimeline}`);
+        if (!this.synced) return;
         if (toStartOfTimeline) return;
         if (event.getType() !== "m.room.message") return;
         if (event.getSender() === this.ownUserId) return;
@@ -182,17 +183,19 @@ export class MatrixConnector {
             text: text || body,
           })
           .then((response) => {
-            console.log(`[Matrix] Sending response (${response.length} chars) to ${roomId}`);
+            const text = response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
+            console.log(`[Matrix] Sending response (${text.length} chars) to ${roomId}`);
             // DMs don't use threads — send as plain reply
             void this.sendMessage(
               roomId,
-              response,
+              text,
               event.getId(),
               isDM ? undefined : threadRoot
             );
           })
           .catch((err: unknown) => {
             console.error("[Matrix] Orchestrator error:", err);
+            void this.sendMessage(roomId, "_(Erreur interne, merci de réessayer.)_", event.getId(), isDM ? undefined : threadRoot);
           });
       }
     );
