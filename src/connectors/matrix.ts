@@ -26,7 +26,7 @@ export class MatrixConnector {
   private synced = false;
   private activeBotThreads = new Set<string>();
   private dmRooms = new Set<string>();
-  private joiningRooms = new Set<string>();
+  private greetedRooms = new Set<string>();
 
   constructor(private orchestrator: Orchestrator) {
     const { homeserver, user, accessToken, password } = config.matrix;
@@ -65,9 +65,6 @@ export class MatrixConnector {
       if (member.membership !== "invite") return;
 
       const roomId = member.roomId;
-      if (this.joiningRooms.has(roomId)) return;
-      this.joiningRooms.add(roomId);
-
       const isDirect =
         (event.getContent() as Record<string, unknown>).is_direct === true;
       if (isDirect) this.dmRooms.add(roomId);
@@ -77,6 +74,8 @@ export class MatrixConnector {
         .joinRoom(roomId)
         .then(() => {
           console.log(`[Matrix] Joined ${roomId}`);
+          if (this.greetedRooms.has(roomId)) return;
+          this.greetedRooms.add(roomId);
           const msg = this.client.isRoomEncrypted(roomId)
             ? ENCRYPTION_WARNING
             : WELCOME_MESSAGE;
