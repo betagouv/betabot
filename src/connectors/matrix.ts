@@ -148,10 +148,22 @@ export class MatrixConnector {
           return;
         }
 
-        // Strip mention from message body
-        const text = body
-          .replace(new RegExp(this.ownUserId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "")
-          .trim();
+        // Strip mention from message body (by Matrix user ID and display name)
+        const displayName = this.client.getUser(this.ownUserId)?.displayName ?? "";
+        let text = body.replace(
+          new RegExp(this.ownUserId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+          ""
+        );
+        if (displayName) {
+          text = text.replace(
+            new RegExp(
+              displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:?\\s*",
+              "gi"
+            ),
+            ""
+          );
+        }
+        text = text.trim();
 
         console.log(`[Matrix] Handling message from ${sender}, threadRoot=${threadRoot}, text=${JSON.stringify(text || body)}`);
 
