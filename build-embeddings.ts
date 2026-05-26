@@ -83,12 +83,15 @@ interface VideoChunk {
   channel: string;
   url: string;
   date: string;
+  description: string;
 }
 
 interface PeertubeItem {
   id: string;
   url: string;
   title: string;
+  summary?: string;
+  content_html?: string;
   date_published?: string;
   date_modified?: string;
 }
@@ -101,6 +104,10 @@ interface PeertubeChannel {
 
 function excerpt(text: string, maxLen = 200): string {
   return text.length > maxLen ? text.slice(0, maxLen) + "…" : text;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function readJson<T>(filePath: string): T {
@@ -339,8 +346,11 @@ async function buildVideosEmbeddings() {
       const title = item.title ?? "(sans titre)";
       const url = item.url ?? item.id ?? "";
       const date = item.date_published ?? "";
-      chunks.push({ title, channel: channelName, url, date });
-      texts.push(`[${channelName}] ${title}`);
+      const description = item.content_html
+        ? stripHtml(item.content_html)
+        : (item.summary ?? "");
+      chunks.push({ title, channel: channelName, url, date, description });
+      texts.push(description ? `[${channelName}] ${title}\n${description}` : `[${channelName}] ${title}`);
     }
   }
 

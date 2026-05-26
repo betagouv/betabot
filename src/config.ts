@@ -21,6 +21,7 @@ export const config = {
     user: process.env["MATRIX_USER"],
     accessToken: process.env["MATRIX_ACCESS_TOKEN"],
     password: process.env["MATRIX_PASSWORD"],
+    deviceId: process.env["MATRIX_DEVICE_ID"],
   },
 } as const;
 

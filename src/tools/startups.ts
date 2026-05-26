@@ -270,3 +270,9 @@ export const handlers: Record<
       (args["include_previous"] as boolean) ?? false,
     ),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}

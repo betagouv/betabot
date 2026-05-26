@@ -190,3 +190,9 @@ export const handlers: Record<
   get_org_changelog: (args) =>
     get_org_changelog(args["org"] as string),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}

@@ -14,6 +14,7 @@ interface Video {
   date: string;
   url: string;
   channel: string;
+  description: string;
 }
 
 interface VideoChunk {
@@ -21,12 +22,15 @@ interface VideoChunk {
   channel: string;
   url: string;
   date: string;
+  description: string;
 }
 
 interface PeertubeItem {
   id: string;
   url: string;
   title: string;
+  summary?: string;
+  content_html?: string;
   date_published?: string;
   date_modified?: string;
 }
@@ -34,6 +38,10 @@ interface PeertubeItem {
 interface PeertubeChannel {
   title: string;
   items?: PeertubeItem[];
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // Lazy-loaded search indices
@@ -82,11 +90,15 @@ async function get_videos(channel?: string): Promise<Video[]> {
 
     const items = (feed.items ?? []).slice(0, 25);
     for (const item of items) {
+      const description = item.content_html
+        ? stripHtml(item.content_html)
+        : (item.summary ?? "");
       results.push({
         title: item.title ?? "(sans titre)",
         date: item.date_published ?? item.date_modified ?? "",
         url: item.url ?? item.id ?? "",
         channel: channelName,
+        description,
       });
     }
   }
@@ -154,3 +166,9 @@ export const handlers: Record<
     search_videos(args["query"] as string, (args["top_k"] as number) ?? 5),
   get_videos: (args) => get_videos(args["channel"] as string | undefined),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}

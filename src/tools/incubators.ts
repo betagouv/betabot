@@ -157,3 +157,9 @@ export const handlers: Record<
   get_incubator_detail: (args) =>
     get_incubator_detail(args["id"] as string),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}

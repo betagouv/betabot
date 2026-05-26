@@ -193,3 +193,9 @@ export const handlers: Record<
   get_member_startups: (args) =>
     get_member_startups(args["member_id"] as string),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}

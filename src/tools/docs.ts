@@ -116,3 +116,9 @@ export const handlers: Record<
     search_docs(args["query"] as string, (args["top_k"] as number) ?? 5),
   get_doc_page: (args) => get_doc_page(args["path"] as string),
 };
+
+export function reset(): void {
+  matrix = null;
+  bm25 = null;
+  indexEntries = null;
+}
