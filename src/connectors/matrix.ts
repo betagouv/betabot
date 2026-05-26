@@ -723,7 +723,7 @@ export class MatrixConnector {
           roomId,
           replyText,
           userEventId,
-          isDM ? undefined : threadRoot,
+          threadRoot,
         );
       })
       .catch(async (err: unknown) => {
@@ -732,7 +732,7 @@ export class MatrixConnector {
           roomId,
           "_(Erreur interne, merci de réessayer.)_",
           userEventId,
-          isDM ? undefined : threadRoot,
+          threadRoot,
         );
       });
   }
