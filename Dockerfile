@@ -3,6 +3,7 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY scripts ./scripts
 RUN npm ci
 
 COPY tsconfig.json ./
@@ -20,7 +21,12 @@ WORKDIR /app
 
 # Install production deps (tsx is a production dep so npm run embed works)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY scripts ./scripts
+RUN npm ci --omit=dev --ignore-scripts
+# Reuse the pre-built SDK lib from builder instead of recompiling
+COPY --from=builder /app/node_modules/matrix-bot-sdk/lib ./node_modules/matrix-bot-sdk/lib
+# Download only the platform-specific native crypto binary
+RUN node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist

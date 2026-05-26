@@ -4,7 +4,7 @@
   "description": "Self-hosted bot for the beta.gouv.fr community",
   "type": "module",
   "scripts": {
-    "postinstall": "node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js",
+    "postinstall": "node scripts/postinstall.cjs",
     "build": "tsc",
     "dev": "node --env-file=.env --import tsx src/index.ts",
     "embed": "node --import tsx build-embeddings.ts",
