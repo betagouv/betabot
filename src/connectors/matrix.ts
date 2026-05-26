@@ -277,8 +277,10 @@ export class MatrixConnector {
     const storageProvider = new SimpleFsStorageProvider(
       `${config.dataDir}/bot-session.json`,
     );
+    // 0 = StoreType.Sqlite, the only available store type in matrix-sdk-crypto-nodejs
     const cryptoProvider = new RustSdkCryptoStorageProvider(
       `${config.dataDir}/crypto`,
+      0 as unknown as never,
     );
 
     this.client = new MatrixClient(

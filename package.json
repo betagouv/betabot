@@ -4,6 +4,7 @@
   "description": "Self-hosted bot for the beta.gouv.fr community",
   "type": "module",
   "scripts": {
+    "postinstall": "node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js",
     "build": "tsc",
     "dev": "node --env-file=.env --import tsx src/index.ts",
     "embed": "node --import tsx build-embeddings.ts",
@@ -20,7 +21,7 @@
     "gray-matter": "^4",
     "ical": "^0.8",
     "marked": "^18.0.4",
-    "matrix-bot-sdk": "^0.7.0",
+    "matrix-bot-sdk": "github:element-hq/matrix-bot-sdk#0.9.0-element.0",
     "openai": "^4",
     "remark-frontmatter": "^5",
     "remark-parse": "^11",
