@@ -44,27 +44,48 @@ function generateX25519KeyPair() {
   return { privateKey, pubBytes, pubB64, pubB64NoPad };
 }
 
-function computeX25519(ourPrivKey: nodeCrypto.KeyObject, theirPubBytes: Buffer): Buffer {
+function computeX25519(
+  ourPrivKey: nodeCrypto.KeyObject,
+  theirPubBytes: Buffer,
+): Buffer {
   const header = Buffer.from("302a300506032b656e032100", "hex");
   const theirSpki = Buffer.concat([header, theirPubBytes]);
-  const theirPubKey = nodeCrypto.createPublicKey({ key: theirSpki, format: "der", type: "spki" });
-  return nodeCrypto.diffieHellman({ privateKey: ourPrivKey, publicKey: theirPubKey });
+  const theirPubKey = nodeCrypto.createPublicKey({
+    key: theirSpki,
+    format: "der",
+    type: "spki",
+  });
+  return nodeCrypto.diffieHellman({
+    privateKey: ourPrivKey,
+    publicKey: theirPubKey,
+  });
 }
 
 function canonicalJson(obj: unknown): string {
   if (typeof obj !== "object" || obj === null) return JSON.stringify(obj);
-  if (Array.isArray(obj)) return "[" + (obj as unknown[]).map(canonicalJson).join(",") + "]";
+  if (Array.isArray(obj))
+    return "[" + (obj as unknown[]).map(canonicalJson).join(",") + "]";
   return (
     "{" +
     Object.keys(obj as object)
       .sort()
-      .map((k) => JSON.stringify(k) + ":" + canonicalJson((obj as Record<string, unknown>)[k]))
+      .map(
+        (k) =>
+          JSON.stringify(k) +
+          ":" +
+          canonicalJson((obj as Record<string, unknown>)[k]),
+      )
       .join(",") +
     "}"
   );
 }
 
-function hkdfSha256(ikm: Buffer, salt: Buffer, info: string, length: number): Buffer {
+function hkdfSha256(
+  ikm: Buffer,
+  salt: Buffer,
+  info: string,
+  length: number,
+): Buffer {
   const prk = nodeCrypto.createHmac("sha256", salt).update(ikm).digest();
   const infoBuffer = Buffer.from(info, "utf8");
   const chunks: Buffer[] = [];
@@ -82,19 +103,70 @@ function hkdfSha256(ikm: Buffer, salt: Buffer, info: string, length: number): Bu
 }
 
 const SAS_EMOJI = [
-  "🐶 Dog", "🐱 Cat", "🦁 Lion", "🐎 Horse", "🦄 Unicorn", "🐷 Pig",
-  "🐘 Elephant", "🐰 Rabbit", "🐼 Panda", "🐓 Rooster", "🐧 Penguin",
-  "🐢 Turtle", "🐟 Fish", "🐙 Octopus", "🦋 Butterfly", "🌷 Flower",
-  "🌳 Tree", "🌵 Cactus", "🍄 Mushroom", "🌏 Globe", "🌙 Moon",
-  "☁️ Cloud", "🔥 Fire", "🍌 Banana", "🍎 Apple", "🍓 Strawberry",
-  "🌽 Corn", "🍕 Pizza", "🎂 Cake", "❤️ Heart", "😀 Smiley",
-  "🤖 Robot", "🎩 Hat", "👓 Glasses", "🔧 Wrench", "🎅 Santa",
-  "👍 Thumbs Up", "☂️ Umbrella", "⌛ Hourglass", "⏰ Clock", "🎁 Gift",
-  "💡 Light Bulb", "📕 Book", "✏️ Pencil", "📎 Paperclip", "✂️ Scissors",
-  "🔒 Lock", "🔑 Key", "🔨 Hammer", "📞 Telephone", "🏁 Flag",
-  "🚂 Train", "🚲 Bicycle", "✈️ Airplane", "🚀 Rocket", "🏆 Trophy",
-  "⚽ Ball", "🎸 Guitar", "🎺 Trumpet", "🔔 Bell", "⚓ Anchor",
-  "🎧 Headphones", "📁 Folder", "📌 Pin",
+  "🐶 Dog",
+  "🐱 Cat",
+  "🦁 Lion",
+  "🐎 Horse",
+  "🦄 Unicorn",
+  "🐷 Pig",
+  "🐘 Elephant",
+  "🐰 Rabbit",
+  "🐼 Panda",
+  "🐓 Rooster",
+  "🐧 Penguin",
+  "🐢 Turtle",
+  "🐟 Fish",
+  "🐙 Octopus",
+  "🦋 Butterfly",
+  "🌷 Flower",
+  "🌳 Tree",
+  "🌵 Cactus",
+  "🍄 Mushroom",
+  "🌏 Globe",
+  "🌙 Moon",
+  "☁️ Cloud",
+  "🔥 Fire",
+  "🍌 Banana",
+  "🍎 Apple",
+  "🍓 Strawberry",
+  "🌽 Corn",
+  "🍕 Pizza",
+  "🎂 Cake",
+  "❤️ Heart",
+  "😀 Smiley",
+  "🤖 Robot",
+  "🎩 Hat",
+  "👓 Glasses",
+  "🔧 Wrench",
+  "🎅 Santa",
+  "👍 Thumbs Up",
+  "☂️ Umbrella",
+  "⌛ Hourglass",
+  "⏰ Clock",
+  "🎁 Gift",
+  "💡 Light Bulb",
+  "📕 Book",
+  "✏️ Pencil",
+  "📎 Paperclip",
+  "✂️ Scissors",
+  "🔒 Lock",
+  "🔑 Key",
+  "🔨 Hammer",
+  "📞 Telephone",
+  "🏁 Flag",
+  "🚂 Train",
+  "🚲 Bicycle",
+  "✈️ Airplane",
+  "🚀 Rocket",
+  "🏆 Trophy",
+  "⚽ Ball",
+  "🎸 Guitar",
+  "🎺 Trumpet",
+  "🔔 Bell",
+  "⚓ Anchor",
+  "🎧 Headphones",
+  "📁 Folder",
+  "📌 Pin",
 ];
 
 function decodeSasEmoji(sasBytes: Buffer): string[] {
@@ -154,7 +226,8 @@ export class MatrixConnector {
   async start(): Promise<void> {
     // Set global.Olm before creating the client (needed for matrix-bot-sdk compat layer)
     try {
-      (globalThis as unknown as { Olm: unknown }).Olm = _require("@matrix-org/olm");
+      (globalThis as unknown as { Olm: unknown }).Olm =
+        _require("@matrix-org/olm");
     } catch {}
 
     const { homeserver, user, accessToken, password } = config.matrix;
@@ -164,14 +237,21 @@ export class MatrixConnector {
       const saved = loadCredentials(config.dataDir);
       if (saved) {
         token = saved.accessToken;
-        console.log(`[Matrix] Loaded saved credentials (device=${saved.deviceId})`);
+        console.log(
+          `[Matrix] Loaded saved credentials (device=${saved.deviceId})`,
+        );
       } else if (password) {
         const res = await fetch(`${homeserver}/_matrix/client/v3/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "m.login.password", user: user!, password: password! }),
+          body: JSON.stringify({
+            type: "m.login.password",
+            user: user!,
+            password: password!,
+          }),
         });
-        if (!res.ok) throw new Error(`[Matrix] Login failed: ${await res.text()}`);
+        if (!res.ok)
+          throw new Error(`[Matrix] Login failed: ${await res.text()}`);
         const data = (await res.json()) as {
           access_token: string;
           device_id: string;
@@ -183,7 +263,9 @@ export class MatrixConnector {
           deviceId: data.device_id,
           userId: data.user_id,
         });
-        console.log(`[Matrix] New device registered (device=${data.device_id})`);
+        console.log(
+          `[Matrix] New device registered (device=${data.device_id})`,
+        );
       } else {
         throw new Error("[Matrix] No access token or password configured");
       }
@@ -192,10 +274,19 @@ export class MatrixConnector {
     this.resolvedToken = token;
     mkdirSync(config.dataDir, { recursive: true });
 
-    const storageProvider = new SimpleFsStorageProvider(`${config.dataDir}/bot-session.json`);
-    const cryptoProvider = new RustSdkCryptoStorageProvider(`${config.dataDir}/crypto`);
+    const storageProvider = new SimpleFsStorageProvider(
+      `${config.dataDir}/bot-session.json`,
+    );
+    const cryptoProvider = new RustSdkCryptoStorageProvider(
+      `${config.dataDir}/crypto`,
+    );
 
-    this.client = new MatrixClient(homeserver!, token, storageProvider, cryptoProvider);
+    this.client = new MatrixClient(
+      homeserver!,
+      token,
+      storageProvider,
+      cryptoProvider,
+    );
 
     this.setupVerification();
     this.setupMessageHandlers();
@@ -206,7 +297,9 @@ export class MatrixConnector {
     const whoami = await this.client.getWhoAmI();
     this.ownUserId = whoami.user_id;
     this.ownDeviceId = whoami.device_id ?? "";
-    console.log(`[Matrix] Connected as ${this.ownUserId} / ${this.ownDeviceId}`);
+    console.log(
+      `[Matrix] Connected as ${this.ownUserId} / ${this.ownDeviceId}`,
+    );
 
     process.on("SIGINT", () => {
       this.client.stop();
@@ -222,7 +315,9 @@ export class MatrixConnector {
       device_lists?: Record<string, unknown>;
       device_one_time_keys_count?: Record<string, unknown>;
     };
-    type PatchedClient = MatrixClient & { processSync?: (data: SyncData) => Promise<void> };
+    type PatchedClient = MatrixClient & {
+      processSync?: (data: SyncData) => Promise<void>;
+    };
 
     const pc = this.client as PatchedClient;
     const originalProcessSync = pc.processSync?.bind(this.client);
@@ -252,11 +347,15 @@ export class MatrixConnector {
       const patched = JSON.parse(JSON.stringify(syncData)) as SyncData;
       patched.to_device = { events: nonVerifEvents };
       patched.rooms = patched.rooms ?? {};
-      (patched.rooms as Record<string, unknown>).join = (patched.rooms as Record<string, unknown>).join ?? {};
-      (patched.rooms as Record<string, unknown>).invite = (patched.rooms as Record<string, unknown>).invite ?? {};
-      (patched.rooms as Record<string, unknown>).leave = (patched.rooms as Record<string, unknown>).leave ?? {};
+      (patched.rooms as Record<string, unknown>).join =
+        (patched.rooms as Record<string, unknown>).join ?? {};
+      (patched.rooms as Record<string, unknown>).invite =
+        (patched.rooms as Record<string, unknown>).invite ?? {};
+      (patched.rooms as Record<string, unknown>).leave =
+        (patched.rooms as Record<string, unknown>).leave ?? {};
       patched.device_lists = patched.device_lists ?? {};
-      patched.device_one_time_keys_count = patched.device_one_time_keys_count ?? {};
+      patched.device_one_time_keys_count =
+        patched.device_one_time_keys_count ?? {};
 
       try {
         return await originalProcessSync(patched);
@@ -275,19 +374,27 @@ export class MatrixConnector {
     const fromDevice =
       this.pendingVerif.get(txId)?.fromDevice ??
       (content?.from_device as string | undefined) ??
-      ((evt?.unsigned as Record<string, unknown>)?.device_id as string | undefined) ??
+      ((evt?.unsigned as Record<string, unknown>)?.device_id as
+        | string
+        | undefined) ??
       "";
     const whoami = await this.client.getWhoAmI();
 
     switch (evt.type as string) {
       case "m.key.verification.request": {
-        if (!(content?.methods as string[] | undefined)?.includes("m.sas.v1")) return;
+        if (!(content?.methods as string[] | undefined)?.includes("m.sas.v1"))
+          return;
         this.pendingVerif.set(txId, { sender, fromDevice });
-        await this.sendToDevice("m.key.verification.ready", sender, fromDevice, {
-          from_device: whoami.device_id,
-          methods: ["m.sas.v1"],
-          transaction_id: txId,
-        });
+        await this.sendToDevice(
+          "m.key.verification.ready",
+          sender,
+          fromDevice,
+          {
+            from_device: whoami.device_id,
+            methods: ["m.sas.v1"],
+            transaction_id: txId,
+          },
+        );
         break;
       }
 
@@ -301,15 +408,20 @@ export class MatrixConnector {
           .digest("base64");
         state.ourKeys = ourKeys;
         this.pendingVerif.set(txId, state);
-        await this.sendToDevice("m.key.verification.accept", sender, fromDevice, {
-          transaction_id: txId,
-          method: "m.sas.v1",
-          key_agreement_protocol: "curve25519-hkdf-sha256",
-          hash: "sha256",
-          message_authentication_code: "hkdf-hmac-sha256.v2",
-          short_authentication_string: ["decimal", "emoji"],
-          commitment,
-        });
+        await this.sendToDevice(
+          "m.key.verification.accept",
+          sender,
+          fromDevice,
+          {
+            transaction_id: txId,
+            method: "m.sas.v1",
+            key_agreement_protocol: "curve25519-hkdf-sha256",
+            hash: "sha256",
+            message_authentication_code: "hkdf-hmac-sha256.v2",
+            short_authentication_string: ["decimal", "emoji"],
+            commitment,
+          },
+        );
         break;
       }
 
@@ -319,7 +431,10 @@ export class MatrixConnector {
         const theirPubB64 = content.key as string;
         const theirPubBytes = Buffer.from(theirPubB64, "base64");
         const theirPubNoPad = theirPubB64.replace(/=+$/, "");
-        const sharedSecret = computeX25519(state.ourKeys.privateKey, theirPubBytes);
+        const sharedSecret = computeX25519(
+          state.ourKeys.privateKey,
+          theirPubBytes,
+        );
         const sasInfo =
           "MATRIX_KEY_VERIFICATION_SAS" +
           `|${sender}|${fromDevice}|${theirPubNoPad}` +
@@ -335,7 +450,9 @@ export class MatrixConnector {
         console.log("\n====== EMOJIS SAS ======");
         decodeSasEmoji(sasBytes).forEach((e) => console.log(`  ${e}`));
         console.log("========================");
-        console.log('\n👉 Confirme "Ils correspondent" dans Element pour continuer\n');
+        console.log(
+          '\n👉 Confirme "Ils correspondent" dans Element pour continuer\n',
+        );
         break;
       }
 
@@ -357,14 +474,16 @@ export class MatrixConnector {
         // Verify their MAC
         const theirDeviceKeyId = `ed25519:${fromDevice}`;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const theirKeysResp = await (this.client.doRequest as any)(
+        const theirKeysResp = (await (this.client.doRequest as any)(
           "POST",
           "/_matrix/client/v3/keys/query",
           null,
           { device_keys: { [sender]: [fromDevice] } },
-        ) as KeysQueryResp;
+        )) as KeysQueryResp;
         const theirEd25519 =
-          theirKeysResp?.device_keys?.[sender]?.[fromDevice]?.keys?.[theirDeviceKeyId] ?? "";
+          theirKeysResp?.device_keys?.[sender]?.[fromDevice]?.keys?.[
+            theirDeviceKeyId
+          ] ?? "";
         const theirEd25519NoPad = theirEd25519.replace(/=+$/, "");
         const theirBaseInfo = `${sender}|${fromDevice}|${ownUserId}|${ownDeviceId}|${txId}`;
         const verifyKey = hkdfSha256(
@@ -383,15 +502,16 @@ export class MatrixConnector {
 
         // Send our MAC
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ourKeysResp = await (this.client.doRequest as any)(
+        const ourKeysResp = (await (this.client.doRequest as any)(
           "POST",
           "/_matrix/client/v3/keys/query",
           null,
           { device_keys: { [ownUserId]: [ownDeviceId] } },
-        ) as KeysQueryResp;
+        )) as KeysQueryResp;
         const keyId = `ed25519:${ownDeviceId}`;
         const ed25519key =
-          ourKeysResp?.device_keys?.[ownUserId]?.[ownDeviceId]?.keys?.[keyId] ?? "";
+          ourKeysResp?.device_keys?.[ownUserId]?.[ownDeviceId]?.keys?.[keyId] ??
+          "";
         const ed25519NoPad = ed25519key.replace(/=+$/, "");
         const baseInfo = `${ownUserId}|${ownDeviceId}|${sender}|${fromDevice}|${txId}`;
         const macKey = hkdfSha256(
@@ -455,7 +575,7 @@ export class MatrixConnector {
       body: JSON.stringify({ messages: { [sender]: { [deviceId]: content } } }),
     });
     if (!resp.ok) {
-      const json = await resp.json().catch(() => ({})) as unknown;
+      const json = (await resp.json().catch(() => ({}))) as unknown;
       console.error(`❌ ${type} error:`, JSON.stringify(json));
     } else {
       console.log(`→ ${type}`);
@@ -467,9 +587,12 @@ export class MatrixConnector {
       "room.invite",
       async (roomId: string, inviteEvent: Record<string, unknown>) => {
         const isDirect =
-          (inviteEvent as { content?: { is_direct?: boolean } }).content?.is_direct === true;
+          (inviteEvent as { content?: { is_direct?: boolean } }).content
+            ?.is_direct === true;
         if (isDirect) this.dmRooms.add(roomId);
-        console.log(`[Matrix] Invited to ${roomId} isDirect=${isDirect}, joining…`);
+        console.log(
+          `[Matrix] Invited to ${roomId} isDirect=${isDirect}, joining…`,
+        );
         try {
           await this.client.joinRoom(roomId);
           console.log(`[Matrix] Joined ${roomId}`);
@@ -478,14 +601,20 @@ export class MatrixConnector {
             await this.sendMessage(roomId, WELCOME_MESSAGE);
           }
         } catch (err) {
-          console.error(`[Matrix] Failed to join or welcome in ${roomId}:`, err);
+          console.error(
+            `[Matrix] Failed to join or welcome in ${roomId}:`,
+            err,
+          );
         }
       },
     );
 
-    this.client.on("room.message", (roomId: string, event: Record<string, unknown>) => {
-      void this.handleIncomingMessage(roomId, event);
-    });
+    this.client.on(
+      "room.message",
+      (roomId: string, event: Record<string, unknown>) => {
+        void this.handleIncomingMessage(roomId, event);
+      },
+    );
 
     this.client.on(
       "room.failed_decryption",
@@ -493,9 +622,11 @@ export class MatrixConnector {
         console.log(`[Matrix] Decryption failure in ${roomId}:`, error.message);
         const sender = event.sender as string;
         if (sender === this.ownUserId) return;
-        const relates = (event.content as Record<string, unknown> | undefined)?.[
-          "m.relates_to"
-        ] as { rel_type?: string; event_id?: string } | undefined;
+        const relates = (
+          event.content as Record<string, unknown> | undefined
+        )?.["m.relates_to"] as
+          | { rel_type?: string; event_id?: string }
+          | undefined;
         const threadRoot =
           relates?.rel_type === "m.thread"
             ? (relates.event_id ?? (event.event_id as string))
@@ -541,12 +672,13 @@ export class MatrixConnector {
     const isMentioned = this.ownUserId
       ? formattedBody.includes(this.ownUserId) ||
         body.toLowerCase().includes(this.ownUserId.toLowerCase()) ||
-        (localPart !== "" && body.toLowerCase().includes(localPart.toLowerCase()))
+        (localPart !== "" &&
+          body.toLowerCase().includes(localPart.toLowerCase()))
       : false;
 
-    const relates = (event.content as Record<string, unknown>)?.["m.relates_to"] as
-      | { rel_type?: string; event_id?: string }
-      | undefined;
+    const relates = (event.content as Record<string, unknown>)?.[
+      "m.relates_to"
+    ] as { rel_type?: string; event_id?: string } | undefined;
     const threadRoot =
       relates?.rel_type === "m.thread"
         ? (relates.event_id ?? (event.event_id as string))
@@ -570,15 +702,24 @@ export class MatrixConnector {
 
     const userEventId = event.event_id as string;
 
-    const reactionEventId = await this.sendReaction(roomId, userEventId, "🧠");
+    await this.sendReaction(roomId, userEventId, "🤖");
 
     this.orchestrator
-      .handle({ userId: sender, roomId, threadId: threadRoot, text: text || body })
+      .handle({
+        userId: sender,
+        roomId,
+        threadId: threadRoot,
+        text: text || body,
+      })
       .then(async (response) => {
         const replyText =
           response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
-        await this.sendMessage(roomId, replyText, userEventId, isDM ? undefined : threadRoot);
-        if (reactionEventId) await this.redactEvent(roomId, reactionEventId);
+        await this.sendMessage(
+          roomId,
+          replyText,
+          userEventId,
+          isDM ? undefined : threadRoot,
+        );
       })
       .catch(async (err: unknown) => {
         console.error("[Matrix] Orchestrator error:", err);
@@ -588,27 +729,26 @@ export class MatrixConnector {
           userEventId,
           isDM ? undefined : threadRoot,
         );
-        if (reactionEventId) await this.redactEvent(roomId, reactionEventId);
       });
   }
 
-  private async sendReaction(roomId: string, targetEventId: string, emoji: string): Promise<string | null> {
+  private async sendReaction(
+    roomId: string,
+    targetEventId: string,
+    emoji: string,
+  ): Promise<string | null> {
     try {
       const eventId = await this.client.sendEvent(roomId, "m.reaction", {
-        "m.relates_to": { rel_type: "m.annotation", event_id: targetEventId, key: emoji },
+        "m.relates_to": {
+          rel_type: "m.annotation",
+          event_id: targetEventId,
+          key: emoji,
+        },
       });
       return eventId as string;
     } catch (err) {
       console.error("[Matrix] Failed to send reaction:", err);
       return null;
-    }
-  }
-
-  private async redactEvent(roomId: string, eventId: string): Promise<void> {
-    try {
-      await this.client.redactEvent(roomId, eventId);
-    } catch (err) {
-      console.error("[Matrix] Failed to redact reaction:", err);
     }
   }
 
@@ -645,7 +785,9 @@ export class MatrixConnector {
         is_falling_back: false,
       };
     } else if (replyToEventId) {
-      content["m.relates_to"] = { "m.in_reply_to": { event_id: replyToEventId } };
+      content["m.relates_to"] = {
+        "m.in_reply_to": { event_id: replyToEventId },
+      };
     }
 
     await this.client.sendEvent(roomId, "m.room.message", content);

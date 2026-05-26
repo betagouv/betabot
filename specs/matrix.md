@@ -4,7 +4,7 @@
 
 ## Role
 
-Bridges Matrix rooms/DMs to the `Orchestrator`. Handles authentication, E2EE, invite auto-join, message filtering, mention detection, thread tracking, and reply formatting.
+Bridges Matrix rooms/DMs to the `Orchestrator`. Handles authentication, E2EE, invite auto-join, message filtering, mention detection, thread tracking, reply formatting, and SAS device verification.
 
 ## Class
 
@@ -19,15 +19,13 @@ class MatrixConnector {
 
 Three modes, checked in priority order:
 
-| Priority | Condition                          | Method                                                                                         |
-| -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1st      | `$DATA_DIR/credentials.json` exists | Load saved `accessToken` + `deviceId` + `userId` — env-var token/device are ignored.          |
-| 2nd      | `MATRIX_ACCESS_TOKEN` is set        | Direct token auth. Device ID resolved via `/account/whoami` unless `MATRIX_DEVICE_ID` is set. |
-| 3rd      | `MATRIX_PASSWORD` is set            | `m.login.password` flow — creates a new device once, then saves credentials.                  |
+| Priority | Condition                           | Method                                                                            |
+| -------- | ----------------------------------- | --------------------------------------------------------------------------------- |
+| 1st      | `$DATA_DIR/credentials.json` exists | Load saved `accessToken` + `deviceId` + `userId`.                                |
+| 2nd      | `MATRIX_ACCESS_TOKEN` is set        | Direct token auth.                                                                |
+| 3rd      | `MATRIX_PASSWORD` is set            | `m.login.password` flow — creates a new device once, then saves credentials.     |
 
-After the first successful login the resulting credentials are written to `$DATA_DIR/credentials.json` so subsequent starts reuse the same device without any manual step.
-
-`MATRIX_DEVICE_ID` (optional): only consulted when there are no saved credentials. Allows pinning a pre-existing device ID.
+After the first successful password login, credentials are written to `$DATA_DIR/credentials.json` so subsequent starts reuse the same device.
 
 ## Credential persistence
 
@@ -37,68 +35,66 @@ File: `$DATA_DIR/credentials.json` (default `./data/credentials.json`).
 { "accessToken": "...", "deviceId": "...", "userId": "@bot:example.org" }
 ```
 
-- Created automatically on first start.
-- Loaded on every subsequent start, giving the bot a stable E2EE device identity.
-- To force re-registration (new device), delete this file.
+To force re-registration (new device), delete this file.
 
 ## E2EE
 
-- Uses `matrix-js-sdk` Rust crypto (`initRustCrypto`).
-- `fake-indexeddb` polyfills `IndexedDB` for the crypto WASM module in Node.js.
-- Global blacklist of unverified devices: **disabled** (`setGlobalBlacklistUnverifiedDevices(false)`).
-- Error on unknown devices: **disabled** (`setGlobalErrorOnUnknownDevices(false)`).
-- Encrypted events (`m.room.encrypted`) are processed after the SDK fires `MatrixEventEvent.Decrypted`.
+Uses `matrix-bot-sdk` with `RustSdkCryptoStorageProvider` (Rust crypto, stored in `$DATA_DIR/crypto/`). Global `Olm` is initialised from `@matrix-org/olm` before the client is created.
 
-## Crypto state persistence
+Session state is persisted via `SimpleFsStorageProvider` (`$DATA_DIR/bot-session.json`), which stores the sync token so the client resumes from the last seen position on restart.
 
-The Rust crypto WASM stores the Olm account (identity keys, one-time key counter) and Megolm sessions in IndexedDB. Without persistence the account is recreated on every restart, causing:
-- one-time key ID conflicts (`signed_curve25519:AAAAAAAAAA0 already exists`) because the counter resets to 0
-- session loss so pre-restart messages can't be decrypted
+## Device verification (SAS)
 
-`src/idb-persist.ts` provides `dumpIDB` / `restoreIDB`:
-1. On startup, `restoreIDB` loads `$DATA_DIR/crypto-store.json` into the fresh `IDBFactory` **before** `initRustCrypto()` so the WASM finds its existing account and skips `onupgradeneeded`.
-2. A 30-second `setTimeout` writes the first snapshot after the WASM's initial one-time key upload has completed (saving immediately after `initRustCrypto()` would capture a "pending upload" state and cause key-ID conflicts on the next restart).
-3. A 5-minute `setInterval` keeps subsequent snapshots current.
-4. `SIGINT` / `SIGTERM` handlers flush the final state before exit.
+The bot intercepts to-device events **before** the Rust engine can process them by monkey-patching `client.processSync`. Verification events (`*.verification.*`) are stripped from the sync payload forwarded to the SDK and handled manually.
 
-Binary values (`Uint8Array`, `ArrayBuffer`) are base64-encoded in the JSON. The file is located at `$DATA_DIR/crypto-store.json` (default `./data/crypto-store.json`).
+Flow on receiving a verification request:
 
-## Device verification
+| Step | Event received                   | Bot action                                                                                    |
+| ---- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1    | `m.key.verification.request`     | Stores `{ sender, fromDevice }` in `pendingVerif`; sends `m.key.verification.ready`.          |
+| 2    | `m.key.verification.start`       | Generates an X25519 key pair; computes SHA-256 commitment; sends `m.key.verification.accept`. |
+| 3    | `m.key.verification.key`         | Computes DH shared secret; derives SAS bytes via HKDF-SHA-256; logs emojis to console; sends own `m.key.verification.key`. |
+| 4    | `m.key.verification.mac`         | Verifies the MAC from the other side; sends own MAC + `m.key.verification.done`.              |
+| —    | `m.key.verification.cancel`      | Logs the reason and clears the pending state.                                                 |
 
-The bot auto-verifies any SAS verification request it receives:
+The patched `processSync` also sets `patched.rooms.join/invite/leave` to `{}` when absent, preventing the Rust SDK from throwing and falling back to the original (unfiltered) sync data.
 
-1. Listens for `CryptoEvent.VerificationRequestReceived` on the client.
-2. Calls `request.accept()` to send `m.key.verification.ready`.
-3. Waits for the other side to send `m.key.verification.start` (watches `VerificationRequestEvent.Change` until `request.verifier` is set). The bot does **not** call `startVerification()` itself — doing so would create a race where both sides send `start` simultaneously.
-4. On `VerifierEvent.ShowSas`, logs the emojis and calls `sas.confirm()` automatically. A 500 ms `setInterval` polls `verifier.getShowSasCallbacks()` as a fallback in case the Rust backend emits SAS before the event listener is registered.
-5. Awaits `verifier.verify()` to complete the handshake; the poll timer is cleared in the `finally` block.
+`whoami` is fetched fresh inside each `handleVerifEvent` call to ensure the correct `user_id` and `device_id` are used regardless of startup timing.
 
-Errors are caught and logged; they do not crash the bot. To verify the bot's device from a Matrix client (e.g. Element), initiate a device verification request — the bot will accept it automatically and Element will complete after the user confirms the emojis on their side.
+To verify the bot, initiate a device verification from Element; the bot logs the SAS emojis and the user confirms on their side.
 
-## Sync
+## Startup message filter
 
-- `startClient({ initialSyncLimit: 0, lazyLoadMembers: true })` — no backfill of history.
-- The `synced` flag is set on first `PREPARED` state; events received before that are dropped.
+`startupTs` is recorded at instantiation time (`Date.now()`). Any incoming room message whose `origin_server_ts` predates `startupTs` is silently dropped, preventing the bot from replying to messages that arrived while it was offline.
 
 ## Invite auto-join
 
-On `RoomMemberEvent.Membership`:
+On `room.invite`:
 
-- Only acts when `member.userId === ownUserId` and `membership === "invite"`.
-- Detects DM rooms via `is_direct: true` in the invite content; adds the room to `dmRooms`.
-- Joins the room, then sends `WELCOME_MESSAGE` once per room (tracked in `greetedRooms`).
+- Adds the room to `dmRooms` if `is_direct: true` in the invite content.
+- Joins the room unconditionally.
+- Sends `WELCOME_MESSAGE` only for DM rooms (single interlocutor), once per room (tracked in `greetedRooms`). Group channels are joined silently.
 
 ## Message routing
 
-On `RoomEvent.Timeline`, a message is handled if **any** of the following is true:
+On `room.message`, a message is handled if **any** of the following is true:
 
-| Condition         | Detail                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| DM room           | Room has exactly 2 members, or was flagged `is_direct` at invite time.                                                                      |
-| Bot mentioned     | `formatted_body` contains `ownUserId`, or `body` contains `ownUserId` (case-insensitive), or `body` contains the local part of `ownUserId`. |
-| Active bot thread | A previous bot message exists in this thread (tracked in `activeBotThreads`).                                                               |
+| Condition           | Detail                                                                                                                                   |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| DM room             | Room has exactly 2 members, or was flagged `is_direct` at invite time.                                                                   |
+| Bot mentioned       | `formatted_body` contains `ownUserId`, or `body` contains `ownUserId` (case-insensitive), or `body` contains the local part of `ownUserId`. |
+| Active bot thread   | A previous mention in this thread was recorded in `activeBotThreads`.                                                                    |
 
-Ignored: events before sync, `toStartOfTimeline`, own messages, non-`m.text` messages, decryption failures.
+Ignored: own messages, non-`m.text` messages, messages older than `startupTs`.
+
+Decryption failures in DMs or active bot threads receive a dedicated apology message.
+
+## Processing indicator
+
+When a message is accepted for processing:
+
+1. A 🧠 reaction is sent on the user's message via `m.reaction` (`m.annotation`).
+2. The reaction remains after the answer is sent (it is never redacted).
 
 ## Thread tracking
 
@@ -106,12 +102,12 @@ When the bot is mentioned, the `threadRoot` event ID is added to `activeBotThrea
 
 Thread root resolution:
 
-- If the event has `m.relates_to.rel_type === "m.thread"` → `relates_to.event_id`.
-- Otherwise → `event.getId()` (the event itself is the thread root).
+- `m.relates_to.rel_type === "m.thread"` → `relates_to.event_id`.
+- Otherwise → `event.event_id` (the event itself becomes the thread root).
 
 ## Text cleaning
 
-Before sending to the orchestrator, the bot's own user ID and display name are stripped from the message body (regex, case-insensitive).
+Before passing to the orchestrator, the bot's own user ID is stripped from the message body (regex, case-insensitive). If stripping leaves an empty string, the original body is used.
 
 ## Sending replies
 
@@ -126,16 +122,9 @@ On orchestrator error, sends `_(Erreur interne, merci de réessayer.)_` as fallb
 
 ## Welcome message
 
-Sent once per room on first join. Lists the bot's capabilities in French with bullet points and emojis.
+Sent once per **DM room** on first join. Lists the bot's capabilities in French with bullet points and emojis. Not sent in group channels.
 
 ## Config used
 
-`config.matrix.{homeserver, user, accessToken, password, deviceId}` from `src/config.ts`.
-
-## npm scripts
-
-| Script                  | Command                                                  |
-| ----------------------- | -------------------------------------------------------- |
-| `npm run dev`           | `node --env-file=.env --import tsx src/index.ts`         |
-| `npm run start`         | `node --env-file=.env dist/src/index.js`                 |
-| `npm run get-device-id` | `node --env-file=.env --import tsx src/get-device-id.ts` |
+`config.matrix.{homeserver, user, accessToken, password}` from `src/config.ts`.  
+`config.dataDir` for storage paths.
