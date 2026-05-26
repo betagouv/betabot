@@ -1,5 +1,5 @@
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -10,11 +10,11 @@ COPY src ./src
 RUN npm run build
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:22-slim AS runtime
 ENV NODE_ENV=production \
     DATA_DIR=/data
 
-RUN apk add --no-cache curl git jq tree
+RUN apt-get update && apt-get install -y --no-install-recommends curl git jq tree && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
