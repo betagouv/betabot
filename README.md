@@ -47,6 +47,8 @@ Tool dispatcher
 
 Search tools use **hybrid retrieval**: dense cosine similarity on `Float32Array` `.bin` embedding matrices + BM25 sparse search, fused with Reciprocal Rank Fusion (RRF).
 
+Every bot response ends with a discrete link to [open a feedback issue](https://github.com/betagouv/betabot/issues/new).
+
 ---
 
 ## Requirements

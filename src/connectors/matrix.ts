@@ -714,8 +714,11 @@ export class MatrixConnector {
         text: text || body,
       })
       .then(async (response) => {
-        const replyText =
+        const base =
           response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
+        const replyText =
+          base +
+          "\n\n---\n*[Partager un retour](https://github.com/betagouv/betabot/issues/new)*";
         await this.sendMessage(
           roomId,
           replyText,
