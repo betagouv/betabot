@@ -17,11 +17,10 @@
   },
   "dependencies": {
     "esbuild-wasm": "^0.28.0",
-    "fake-indexeddb": "^6.2.5",
     "gray-matter": "^4",
     "ical": "^0.8",
     "marked": "^18.0.4",
-    "matrix-js-sdk": "^34",
+    "matrix-bot-sdk": "^0.7.0",
     "openai": "^4",
     "remark-frontmatter": "^5",
     "remark-parse": "^11",
@@ -29,6 +28,9 @@
     "tsx": "^4",
     "unified": "^11",
     "wink-bm25-text-search": "^2"
+  },
+  "optionalDependencies": {
+    "@matrix-org/olm": "^3.2.15"
   },
   "devDependencies": {
     "@types/ical": "^0.8.3",
