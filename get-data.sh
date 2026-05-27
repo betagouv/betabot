@@ -31,6 +31,7 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=designgo
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=tchap&sort=-createdAt" -o "$DATA_DIR/peertube/tchap.json"
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=datagouvfr&sort=-createdAt" -o "$DATA_DIR/peertube/datagouvfr.json"
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.mte&sort=-createdAt" -o "$DATA_DIR/peertube/fabnum.mte.json"
+curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=ruche_numerique&sort=-createdAt" -o "$DATA_DIR/peertube/ruche_numerique.json"
 
 curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o "$DATA_DIR/calendar.ics"
 
