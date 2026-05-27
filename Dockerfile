@@ -15,7 +15,7 @@ FROM node:22-slim AS runtime
 ENV NODE_ENV=production \
     DATA_DIR=/data
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl git jq tree && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq tree && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
