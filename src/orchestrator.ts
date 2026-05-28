@@ -27,13 +27,45 @@ import {
   tools as incubatorTools,
   handlers as incubatorHandlers,
 } from "./tools/incubators.js";
+import {
+  tools as dimailTools,
+  handlers as dimailHandlers,
+  toolNames as dimailToolNames,
+} from "./tools/dimail.js";
+import {
+  tools as helpTools,
+  handlers as helpHandlers,
+  buildHelp,
+} from "./tools/help.js";
 
-const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
-Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
-de la documentation et des actualités. uniquement des données publiques. Utilise toujours les outils pour répondre
-aux questions factuelles. Ne devine pas les noms ou les données.
-Tu emploies le tutoiement respecteux, utilise du markdown riche et un peu d'emojis.
-Tes réponses sont concises et vont à l'essentiel.
+function buildSystemPrompt(): string {
+  return `Tu es **betabot**, l'assistant de la communauté beta.gouv.fr. Tu vis dans **Tchap** (la messagerie de l'État, basée sur Matrix). **Tu n'es pas un bot Slack** — n'évoque jamais Slack, et n'invente JAMAIS de commandes que tu n'as pas dans la documentation ci-dessous.
+
+Tu réponds en français. Tu emploies le tutoiement respectueux, utilises du markdown riche et un peu d'emojis. Tes réponses sont concises et vont à l'essentiel.
+
+Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code, de la documentation et des actualités — uniquement des données publiques. Utilise toujours les outils pour répondre aux questions factuelles. Ne devine pas les noms ou les données.
+
+═══════════════════════════════════════════════════════════════
+DOCUMENTATION OFFICIELLE DE TES CAPACITÉS (source de vérité, à jour)
+═══════════════════════════════════════════════════════════════
+
+${buildHelp()}
+
+═══════════════════════════════════════════════════════════════
+FIN DE LA DOCUMENTATION
+═══════════════════════════════════════════════════════════════
+
+RÈGLES STRICTES :
+ - Quand on te demande comment t'utiliser, quelles commandes existent, comment faire une action, ou dans quel salon : utilise UNIQUEMENT les informations de la documentation ci-dessus.
+ - Les seules commandes slash valides sont celles listées : \`/test\`, \`/emails\` (et ses sous-commandes), \`/historique\`. Tout autre \`/quelque-chose\` n'existe pas.
+ - Quand tu cites une commande, copie sa syntaxe exacte depuis la doc — **caractère par caractère**.
+ - Quand tu indiques un salon, cite le libellé exact (entre backticks).
+
+⚠️ ORTHOGRAPHE EXACTE DES COMMANDES (PIÈGES FRÉQUENTS À ÉVITER) :
+ - La commande s'écrit \`/emails\` **en un seul mot, sans tiret, avec un \`s\`**. JAMAIS \`/e-mails\`, JAMAIS \`/e-mail\`, JAMAIS \`/email\` (au singulier), JAMAIS \`/mails\`.
+ - Même si l'orthographe française correcte serait "e-mail" avec un tiret, le NOM de la commande dans ce bot reste \`/emails\` sans tiret. C'est un identifiant technique, pas un mot français.
+ - Si tu hésites sur l'orthographe d'une commande, recopie-la EXACTEMENT depuis la doc ci-dessus, pas depuis ta mémoire.
+ - \`/historique\` s'écrit avec un \`h\` initial et la terminaison française. JAMAIS \`/history\`, JAMAIS \`/hist\`.
 
 Pour les questions liées à notre actualité, utilise ces données:
  - calendrier
@@ -56,11 +88,42 @@ Cite toujours tes sources et lorsque c'est nécessaire tu peux ajouter ces liens
  - [site beta.gouv.fr](https://beta.gouv.fr)
  - [standards des produits beta.gouv.fr](https://standards.beta.gouv.fr)
 `;
+}
 
 const MAX_HISTORY = 20;
 const MAX_TOOL_ITERATIONS = 10;
 
-const ALL_TOOLS: ChatCompletionTool[] = [
+// Safety net: fix common LLM hallucinations in command names before sending to user.
+// Even with a strong system prompt, qwen2.5:14b tends to "correct" /emails to /e-mail(s) (French)
+// or write /email (singular). This regex pass forces the canonical spelling.
+function fixCommandHallucinations(text: string): { fixed: string; count: number } {
+  let count = 0;
+  const fixed = text
+    .replace(/\/e-mails?\b/g, () => {
+      count++;
+      return "/emails";
+    })
+    .replace(/\/email\b(?!s)/g, () => {
+      count++;
+      return "/emails";
+    })
+    .replace(/\/mails\b/g, () => {
+      count++;
+      return "/emails";
+    })
+    .replace(/\/history\b/g, () => {
+      count++;
+      return "/historique";
+    })
+    .replace(/\/hist\b/g, () => {
+      count++;
+      return "/historique";
+    });
+  return { fixed, count };
+}
+
+const BASE_TOOLS: ChatCompletionTool[] = [
+  ...helpTools,
   ...memberTools,
   ...startupTools,
   ...repoTools,
@@ -74,6 +137,7 @@ const ALL_HANDLERS: Record<
   string,
   (args: Record<string, unknown>) => Promise<unknown>
 > = {
+  ...helpHandlers,
   ...memberHandlers,
   ...startupHandlers,
   ...repoHandlers,
@@ -81,7 +145,20 @@ const ALL_HANDLERS: Record<
   ...calendarHandlers,
   ...videoHandlers,
   ...incubatorHandlers,
+  ...dimailHandlers,
 };
+
+function toolsForRoom(roomId: string): ChatCompletionTool[] {
+  const dimailAllowed =
+    config.matrix.dimailRooms.length > 0 &&
+    config.matrix.dimailRooms.includes(roomId);
+  return dimailAllowed ? [...BASE_TOOLS, ...dimailTools] : BASE_TOOLS;
+}
+
+function isToolAllowedInRoom(toolName: string, roomId: string): boolean {
+  if (!dimailToolNames.includes(toolName)) return true;
+  return config.matrix.dimailRooms.includes(roomId);
+}
 
 export class Orchestrator {
   private client: OpenAI;
@@ -129,7 +206,7 @@ export class Orchestrator {
     this.trimHistory(history);
 
     const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt() },
       ...history,
     ];
 
@@ -151,7 +228,7 @@ export class Orchestrator {
       const response = await this.client.chat.completions.create({
         model: config.openai.model,
         messages,
-        tools: ALL_TOOLS,
+        tools: toolsForRoom(input.roomId),
         tool_choice: "auto",
       });
 
@@ -174,12 +251,14 @@ export class Orchestrator {
         choice.finish_reason === "stop" ||
         !assistantMessage.tool_calls?.length
       ) {
-        const text = assistantMessage.content ?? "";
-        if (text.trim()) {
-          debug(`final response (${text.length} chars)`);
-          history.push({ role: "assistant", content: text });
+        const rawText = assistantMessage.content ?? "";
+        if (rawText.trim()) {
+          const { fixed, count } = fixCommandHallucinations(rawText);
+          if (count > 0) debug(`fixed ${count} command hallucination(s)`);
+          debug(`final response (${fixed.length} chars)`);
+          history.push({ role: "assistant", content: fixed });
           this.trimHistory(history);
-          return text;
+          return fixed;
         }
         // LLM stopped but returned no content — ask it to summarize what it found
         debug(`empty response after stop, requesting summary`);
@@ -193,7 +272,12 @@ export class Orchestrator {
           const handler = ALL_HANDLERS[tc.function.name];
           let result: unknown;
           debug(`  tool=${tc.function.name} args=${tc.function.arguments}`);
-          if (!handler) {
+          if (!isToolAllowedInRoom(tc.function.name, input.roomId)) {
+            result = {
+              error: `Tool ${tc.function.name} is not allowed in this room`,
+            };
+            debug(`  -> tool not allowed in room ${input.roomId}`);
+          } else if (!handler) {
             result = { error: `Unknown tool: ${tc.function.name}` };
             debug(`  -> unknown tool`);
           } else {
@@ -235,10 +319,12 @@ export class Orchestrator {
       messages,
     });
 
-    const text = finalResponse.choices[0]?.message.content ?? "";
-    debug(`fallback final response (${text.length} chars)`);
-    history.push({ role: "assistant", content: text });
+    const rawText = finalResponse.choices[0]?.message.content ?? "";
+    const { fixed, count } = fixCommandHallucinations(rawText);
+    if (count > 0) debug(`fixed ${count} command hallucination(s) in fallback`);
+    debug(`fallback final response (${fixed.length} chars)`);
+    history.push({ role: "assistant", content: fixed });
     this.trimHistory(history);
-    return text;
+    return fixed;
   }
 }

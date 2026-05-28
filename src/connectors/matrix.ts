@@ -9,6 +9,41 @@ import {
 import { marked } from "marked";
 import { config } from "../config.js";
 import type { Orchestrator } from "../orchestrator.js";
+import { handleEmailsCommand } from "../commands/emails.js";
+import { record, query, formatHistory } from "../commands/history.js";
+
+const KNOWN_COMMANDS = ["/test", "/emails", "/historique"] as const;
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0),
+  );
+  for (let i = 0; i <= a.length; i++) dp[i]![0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0]![j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i]![j] = Math.min(
+        dp[i - 1]![j]! + 1,
+        dp[i]![j - 1]! + 1,
+        dp[i - 1]![j - 1]! + cost,
+      );
+    }
+  }
+  return dp[a.length]![b.length]!;
+}
+
+function suggestCommand(input: string): string | null {
+  let best: { cmd: string; dist: number } | null = null;
+  for (const cmd of KNOWN_COMMANDS) {
+    const d = levenshtein(input.toLowerCase(), cmd);
+    if (best === null || d < best.dist) best = { cmd, dist: d };
+  }
+  return best && best.dist <= 2 ? best.cmd : null;
+}
 
 const _require = createRequire(import.meta.url);
 
@@ -214,6 +249,7 @@ export class MatrixConnector {
   private client!: MatrixClient;
   private ownUserId = "";
   private ownDeviceId = "";
+  private ownDisplayName = "";
   private resolvedToken = "";
   private activeBotThreads = new Set<string>();
   private dmRooms = new Set<string>();
@@ -299,8 +335,16 @@ export class MatrixConnector {
     const whoami = await this.client.getWhoAmI();
     this.ownUserId = whoami.user_id;
     this.ownDeviceId = whoami.device_id ?? "";
+    try {
+      const profile = (await this.client.getUserProfile(this.ownUserId)) as {
+        displayname?: string;
+      };
+      this.ownDisplayName = profile.displayname ?? "";
+    } catch {
+      this.ownDisplayName = "";
+    }
     console.log(
-      `[Matrix] Connected as ${this.ownUserId} / ${this.ownDeviceId}`,
+      `[Matrix] Connected as ${this.ownUserId} / ${this.ownDeviceId} / displayName="${this.ownDisplayName}"`,
     );
 
     process.on("SIGINT", () => {
@@ -658,6 +702,16 @@ export class MatrixConnector {
     const eventTs = event.origin_server_ts as number | undefined;
     if (eventTs !== undefined && eventTs < this.startupTs) return;
 
+    if (
+      config.matrix.allowedRooms.length > 0 &&
+      !config.matrix.allowedRooms.includes(roomId)
+    ) {
+      console.log(
+        `[Matrix] Ignoring message in ${roomId} (not in MATRIX_ALLOWED_ROOMS)`,
+      );
+      return;
+    }
+
     const content = event.content as {
       msgtype?: string;
       body?: string;
@@ -686,32 +740,163 @@ export class MatrixConnector {
         ? (relates.event_id ?? (event.event_id as string))
         : (event.event_id as string);
 
-    const isActiveBotThread = this.activeBotThreads.has(threadRoot ?? "");
+    // Tchap may strip the "* " prefix (which marks an edited message) before our check.
+    const trimmedBody = body.trim().replace(/^\*\s+/, "");
+    const stripLeadingMention = (s: string): { text: string; matched: boolean } => {
+      const lower = s.toLowerCase();
+      const patterns = [
+        this.ownUserId,
+        localPart,
+        this.ownDisplayName,
+      ].filter((p): p is string => !!p);
+      for (const pat of patterns) {
+        if (lower.startsWith(pat.toLowerCase())) {
+          return {
+            text: s.slice(pat.length).replace(/^[\s,:;]+/, ""),
+            matched: true,
+          };
+        }
+      }
+      return { text: s, matched: false };
+    };
+    const { text: afterMention, matched: mentionAtStart } = stripLeadingMention(trimmedBody);
+
+    // Slash command rule:
+    // - In DM: any leading "/" counts.
+    // - In a room: must be @-mentioned at the START, and "/" must be the first char right after the mention.
+    const isSlashCommand = isDM
+      ? trimmedBody.startsWith("/")
+      : mentionAtStart && afterMention.startsWith("/");
 
     console.log(
-      `[Matrix] Message from ${sender} in ${roomId} isDM=${isDM} isMentioned=${isMentioned} isActiveBotThread=${isActiveBotThread} body=${JSON.stringify(body.slice(0, 100))}`,
+      `[Matrix] Message from ${sender} in ${roomId} isDM=${isDM} isMentioned=${isMentioned} mentionAtStart=${mentionAtStart} isSlashCommand=${isSlashCommand} body=${JSON.stringify(body.slice(0, 100))}`,
     );
 
-    if (!isDM && !isMentioned && !isActiveBotThread) return;
+    if (!isDM && !isMentioned && !isSlashCommand) return;
 
-    if (isMentioned && threadRoot) this.activeBotThreads.add(threadRoot);
-
-    let text = body.replace(
-      new RegExp(this.ownUserId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
-      "",
-    );
-    text = text.trim();
+    // For slash dispatch and LLM, prefer the cleanly-stripped "afterMention" when mention is at start.
+    // Otherwise fall back to stripping all occurrences of the mention from the body.
+    let text: string;
+    if (mentionAtStart) {
+      text = afterMention;
+    } else {
+      text = body.replace(
+        new RegExp(this.ownUserId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+        "",
+      );
+      text = text.trim();
+    }
 
     const userEventId = event.event_id as string;
 
+    if (isSlashCommand) {
+      const commandRooms = config.matrix.commandRooms;
+      if (commandRooms.length > 0 && !commandRooms.includes(roomId)) {
+        await this.sendReaction(roomId, userEventId, "⛔");
+        const cmd = text.split(/\s+/)[0] || "/?";
+        const where = config.matrix.commandRoomsLabel
+          ? `\`${config.matrix.commandRoomsLabel}\``
+          : commandRooms.map((r) => `\`${r}\``).join(", ");
+        await this.sendMessage(
+          roomId,
+          `⛔ La commande \`${cmd}\` n'est pas autorisée dans ce salon.\n\nElle est disponible dans : ${where}`,
+          userEventId,
+          threadRoot,
+        );
+        record({ user: sender, room: roomId, kind: "slash", text, status: "refused", detail: "room not in MATRIX_COMMAND_ROOMS" });
+        return;
+      }
+
+      if (text === "/test" || text.startsWith("/test ")) {
+        await this.sendReaction(roomId, userEventId, "✅");
+        await this.sendMessage(
+          roomId,
+          `🟢 **pong**`,
+          userEventId,
+          threadRoot,
+        );
+        record({ user: sender, room: roomId, kind: "slash", text, status: "ok" });
+        return;
+      }
+
+      if (text === "/emails" || text.startsWith("/emails ") || text.startsWith("/emails\n")) {
+        const result = await handleEmailsCommand(text);
+        await this.sendReaction(roomId, userEventId, result.reaction);
+        await this.sendMessage(roomId, result.message, userEventId, threadRoot);
+        const status: "ok" | "error" =
+          result.reaction === "✅" || result.reaction === "📋" || result.reaction === "📖" || result.reaction === "📭"
+            ? "ok"
+            : "error";
+        record({ user: sender, room: roomId, kind: "slash", text, status, detail: result.reaction });
+        return;
+      }
+
+      if (text === "/historique" || text.startsWith("/historique ")) {
+        const isAdmin = config.matrix.adminUsers.includes(sender);
+        if (!isAdmin) {
+          await this.sendReaction(roomId, userEventId, "⛔");
+          await this.sendMessage(
+            roomId,
+            `⛔ La commande \`/historique\` est réservée aux administrateurs.`,
+            userEventId,
+            threadRoot,
+          );
+          record({ user: sender, room: roomId, kind: "slash", text, status: "refused", detail: "not in MATRIX_ADMIN_USERS" });
+          return;
+        }
+        const arg = text.replace(/^\/historique\s*/, "").trim();
+        const entries = query(arg || undefined, 20);
+        const msg = formatHistory(entries, arg || undefined);
+        await this.sendReaction(roomId, userEventId, "📬");
+
+        try {
+          const dmRoomId = await this.client.dms.getOrCreateDm(sender);
+          this.dmRooms.add(dmRoomId);
+          await this.sendMessage(dmRoomId, msg);
+          if (dmRoomId !== roomId) {
+            await this.sendMessage(
+              roomId,
+              `📬 Historique envoyé en MP.`,
+              userEventId,
+              threadRoot,
+            );
+          }
+          record({ user: sender, room: roomId, kind: "slash", text, status: "ok", detail: arg ? `filter=${arg} dm=ok` : "dm=ok" });
+        } catch (err) {
+          console.error("[Matrix] Failed to send /historique via DM:", err);
+          await this.sendMessage(
+            roomId,
+            `⚠️ Impossible d'ouvrir un MP pour t'envoyer l'historique. Voici la réponse dans le salon :\n\n${msg}`,
+            userEventId,
+            threadRoot,
+          );
+          record({ user: sender, room: roomId, kind: "slash", text, status: "ok", detail: "dm=failed fallback=inline" });
+        }
+        return;
+      }
+
+      const unknownCmd = text.split(/\s+/)[0] || "/?";
+      const suggestion = suggestCommand(unknownCmd);
+      await this.sendReaction(roomId, userEventId, "❌");
+      await this.sendMessage(
+        roomId,
+        `❌ Commande inconnue : \`${unknownCmd}\`.${suggestion ? ` Voulais-tu dire \`${suggestion}\` ?` : ""}\n\nCommandes disponibles : \`/test\`, \`/emails\`, \`/historique\`.`,
+        userEventId,
+        threadRoot,
+      );
+      record({ user: sender, room: roomId, kind: "slash", text, status: "unknown", detail: unknownCmd });
+      return;
+    }
+
     await this.sendReaction(roomId, userEventId, "🤖");
 
+    const mentionText = text || body;
     this.orchestrator
       .handle({
         userId: sender,
         roomId,
         threadId: threadRoot,
-        text: text || body,
+        text: mentionText,
       })
       .then(async (response) => {
         const base =
@@ -725,9 +910,18 @@ export class MatrixConnector {
           userEventId,
           threadRoot,
         );
+        record({ user: sender, room: roomId, kind: "mention", text: mentionText, status: "ok" });
       })
       .catch(async (err: unknown) => {
         console.error("[Matrix] Orchestrator error:", err);
+        record({
+          user: sender,
+          room: roomId,
+          kind: "mention",
+          text: mentionText,
+          status: "error",
+          detail: String(err instanceof Error ? err.message : err).slice(0, 200),
+        });
         await this.sendMessage(
           roomId,
           "_(Erreur interne, merci de réessayer.)_",
@@ -758,15 +952,7 @@ export class MatrixConnector {
   }
 
   private async isDMRoom(roomId: string): Promise<boolean> {
-    if (this.dmRooms.has(roomId)) return true;
-    try {
-      const members = await this.client.getJoinedRoomMembers(roomId);
-      if (Object.keys(members).length === 2) {
-        this.dmRooms.add(roomId);
-        return true;
-      }
-    } catch {}
-    return false;
+    return this.dmRooms.has(roomId);
   }
 
   private async sendMessage(
@@ -775,26 +961,53 @@ export class MatrixConnector {
     replyToEventId?: string,
     threadRootId?: string,
   ): Promise<void> {
-    const content: Record<string, unknown> = {
-      msgtype: "m.text",
-      body: text,
-      format: "org.matrix.custom.html",
-      formatted_body: await marked(text),
+    const buildContent = (
+      withThread: boolean,
+      withReply: boolean,
+    ): Record<string, unknown> => {
+      const c: Record<string, unknown> = {
+        msgtype: "m.text",
+        body: text,
+        format: "org.matrix.custom.html",
+        formatted_body: "",
+      };
+      if (withThread && threadRootId) {
+        c["m.relates_to"] = {
+          rel_type: "m.thread",
+          event_id: threadRootId,
+          "m.in_reply_to": { event_id: replyToEventId ?? threadRootId },
+          is_falling_back: false,
+        };
+      } else if (withReply && replyToEventId) {
+        c["m.relates_to"] = {
+          "m.in_reply_to": { event_id: replyToEventId },
+        };
+      }
+      return c;
     };
 
-    if (threadRootId) {
-      content["m.relates_to"] = {
-        rel_type: "m.thread",
-        event_id: threadRootId,
-        "m.in_reply_to": { event_id: replyToEventId ?? threadRootId },
-        is_falling_back: false,
-      };
-    } else if (replyToEventId) {
-      content["m.relates_to"] = {
-        "m.in_reply_to": { event_id: replyToEventId },
-      };
+    const html = await marked(text);
+    try {
+      const c = buildContent(true, true);
+      c["formatted_body"] = html;
+      await this.client.sendEvent(roomId, "m.room.message", c);
+    } catch (err) {
+      const errMsg = String((err as { error?: string } | undefined)?.error ?? err);
+      if (
+        errMsg.includes("Cannot start threads from an event with a relation")
+      ) {
+        console.warn(
+          `[Matrix] Thread refused (nested relation), falling back to plain reply in ${roomId}`,
+        );
+        const c = buildContent(false, true);
+        c["formatted_body"] = html;
+        await this.client.sendEvent(roomId, "m.room.message", c);
+      } else {
+        console.error(
+          `[Matrix] sendMessage failed in ${roomId}:`,
+          errMsg,
+        );
+      }
     }
-
-    await this.client.sendEvent(roomId, "m.room.message", content);
   }
 }

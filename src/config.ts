@@ -7,6 +7,15 @@ function optionalInt(name: string, fallback: number): number {
   return val ? parseInt(val, 10) : fallback;
 }
 
+function optionalList(name: string): string[] {
+  const val = process.env[name];
+  if (!val) return [];
+  return val
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
 export const config = {
   openai: {
     baseUrl: optional("OPENAI_BASE_URL", "http://localhost:11434/v1"),
@@ -22,6 +31,18 @@ export const config = {
     accessToken: process.env["MATRIX_ACCESS_TOKEN"],
     password: process.env["MATRIX_PASSWORD"],
     deviceId: process.env["MATRIX_DEVICE_ID"],
+    allowedRooms: optionalList("MATRIX_ALLOWED_ROOMS"),
+    commandRooms: optionalList("MATRIX_COMMAND_ROOMS"),
+    commandRoomsLabel: process.env["MATRIX_COMMAND_ROOMS_LABEL"],
+    dimailRooms: optionalList("MATRIX_DIMAIL_ROOMS"),
+    adminUsers: optionalList("MATRIX_ADMIN_USERS"),
+  },
+  dimail: {
+    url: process.env["DIMAIL_URL"],
+    user: process.env["DIMAIL_USER"],
+    password: process.env["DIMAIL_PASSWORD"],
+    token: process.env["DIMAIL_TOKEN"],
+    domain: process.env["DIMAIL_DOMAIN"],
   },
 } as const;
 

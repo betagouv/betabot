@@ -2,3 +2,4 @@ data
 .env
 node_modules
 evals/results
+SECURITY-TESTS.MD
