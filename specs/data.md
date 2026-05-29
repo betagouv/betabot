@@ -49,6 +49,7 @@ All channels from `tube.numerique.gouv.fr`, sorted by `-createdAt`:
 | `tchap.json`               | `tchap`               |
 | `datagouvfr.json`          | `datagouvfr`          |
 | `fabnum.mte.json`          | `fabnum.mte`          |
+| `ruche_numerique.json`     | `ruche_numerique`     |
 
 ### Calendar
 
@@ -155,9 +156,11 @@ Index entry type:
 
 Source: all `data/peertube/*.json` files except `videos.index.json`.
 
-Embedding text per video: `"[{channelName}] {title}"`
+Embedding text per video: `"[{channelName}] {title}\n{description}"` (omits the `\n{description}` part when description is empty).
 
-Fields taken from feed items: `title`, `url` (falls back to `id`), `date_published`.
+`description` = `content_html` stripped of HTML tags, falling back to `summary`, then `""`.
+
+Fields taken from feed items: `title`, `url` (falls back to `id`), `date_published` (falls back to `date_modified`), `content_html`, `summary`.
 
 Outputs: `data/peertube/videos.embeddings.bin`, `data/peertube/videos.bm25.json`, `data/peertube/videos.index.json`
 
@@ -169,6 +172,7 @@ Index entry type:
   channel: string;
   url: string;
   date: string;
+  description: string;
 }
 ```
 
