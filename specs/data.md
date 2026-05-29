@@ -221,6 +221,7 @@ CREATE TABLE incubators (id TEXT PRIMARY KEY, title TEXT, contact TEXT, website 
 CREATE TABLE startups (
   id TEXT PRIMARY KEY, name TEXT, pitch TEXT,
   incubator_id TEXT,           -- from JSONAPI relationships.incubator.data.id
+  incubator TEXT,              -- denormalized: incubators[incubator_id].title
   active_member_count INTEGER DEFAULT 0,
   current_phase TEXT,          -- denormalized: name of the phase with the latest start date
   accessibility_status TEXT,

@@ -5,6 +5,7 @@ import { config } from "../config.js";
 
 const DB_PATH = path.join(config.dataDir, "betabot.db");
 
+// TODO: dynamic
 const SCHEMA = `
 Tables:
   members(id, fullname, domaine, role, created_at)
@@ -12,7 +13,8 @@ Tables:
     domaine: 'Produit'|'Développement'|'Autre'|'Animation'|'Intraprenariat'|'Attributaire'|'Support'|'Data'|'Coaching'|'Déploiement'|'Design'
   member_competences(member_id, competence)
   incubators(id, title, contact, website)
-  startups(id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status, created_at)
+  startups(id, name, pitch, incubator_id, incubator, active_member_count, current_phase, accessibility_status, created_at)
+    incubator: nom lisible de l'incubateur : 'L\'incubateur de l'Éducation nationale et de la Jeunesse'|'La Ruche numérique - l\'Incubateur du Ministère de l\'Agriculture et de la Souveraineté alimentaire'|'La Fabrique Numérique de l\'Ecologie (MTE)'|'L\'Incubateur de la Justice'|'Le département Accompagnement de services numériques de la DINUM'|'L\'Incubateur des Territoires (ANCT)'|'Accélérema'|'Le KUBE, incubateur du ministère des Armées'|'ALLiaNCE'|'L\'Accélérateur de la Transition Écologique (ADEME)'|'Opérateur de produits interministériels'|'L'Incubateur de France travail'|'Mission interministérielle pour l\’apprentissage'|'L'Atelier Numérique du Ministère de la Culture'|'La Fabrique Numérique du Ministère de l\'Intérieur'|'La Fabrique numérique des Finances publiques'|'La Fabrique de la donnée territoriale'|'L\'Atelier Numérique du Ministère de l\'Europe et des Affaires Etrangères'|'Plateforme de l\'inclusion'|'Le laboratoire d\'innovation de l\'ANSSI'|'Incubateur du MEFR (Bercy)'
     created_at: date de la première phase (YYYY-MM-DD)
     current_phase: dernière phase : 'investigation'|'construction'|'acceleration'|'transfere'|'abandon'|'abandon-investigation'|'opere'
     accessibility_status: 'conforme'|'non conforme'|'partiellement conforme'|null

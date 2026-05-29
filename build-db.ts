@@ -99,6 +99,7 @@ db.exec(`
     name TEXT,
     pitch TEXT,
     incubator_id TEXT,
+    incubator TEXT,
     active_member_count INTEGER DEFAULT 0,
     current_phase TEXT,
     accessibility_status TEXT,
@@ -186,6 +187,10 @@ try {
 }
 console.log(`  ✓ ${Object.keys(incubatorsRaw).length} incubators`);
 
+const incubatorTitleMap = new Map<string, string>(
+  Object.entries(incubatorsRaw).map(([id, inc]) => [id, inc.title])
+);
+
 // ─── Startups ─────────────────────────────────────────────────────────────────
 
 console.log("\n[3/4] Loading startups…");
@@ -194,7 +199,7 @@ const startupsApi = readJson<StartupsJSONAPI>(
 );
 
 const insertStartup = db.prepare(
-  "INSERT OR IGNORE INTO startups (id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status, created_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)"
+  "INSERT OR IGNORE INTO startups (id, name, pitch, incubator_id, incubator, active_member_count, current_phase, accessibility_status, created_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)"
 );
 const insertPhase = db.prepare(
   "INSERT INTO startup_phases VALUES (?, ?, ?, ?)"
@@ -222,6 +227,7 @@ try {
       attrs.name ?? null,
       attrs.pitch ?? null,
       incubatorId,
+      incubatorId ? (incubatorTitleMap.get(incubatorId) ?? null) : null,
       currentPhase,
       attrs.accessibility_status ?? null,
       createdAt
