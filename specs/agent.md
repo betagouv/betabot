@@ -37,6 +37,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 
 - Language: French, tutoiement, markdown-rich, concise.
 - Always use tools for factual answers — never guess names or data.
+- For statistical/aggregation questions (counts, rankings, distributions) prefer `query_data` over chaining semantic searches.
 - For "actualité" questions use: calendar, doc updates, PeerTube videos, org changelogs.
 - Entity linking rules (always add a link when mentioning):
   - Startup → `https://beta.gouv.fr/startups/[ghid]`
@@ -58,6 +59,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 | `tools/calendar.ts`   | `get_calendar`                                                 |
 | `tools/videos.ts`     | `search_videos`, `get_videos`                                  |
 | `tools/incubators.ts` | `search_incubators`, `get_incubator_detail`                    |
+| `tools/sqlite.ts`     | `query_data`                                                   |
 
 Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args) => Promise<unknown>>`.
 

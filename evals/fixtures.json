@@ -291,5 +291,20 @@
     "id": "no-tool-thanks",
     "question": "merci pour ta réponse !",
     "expect_tools": []
+  },
+  {
+    "id": "aggregate-startup-most-developers",
+    "question": "quelle startup a le plus de développeurs ?",
+    "expect_tools": ["query_data"]
+  },
+  {
+    "id": "aggregate-most-represented-skills",
+    "question": "quelles sont les compétences les plus représentées dans la communauté ?",
+    "expect_tools": ["query_data"]
+  },
+  {
+    "id": "aggregate-incubator-phases",
+    "question": "quelles sont les phases des startups de l'incubateur écologie ?",
+    "expect_tools": ["query_data"]
   }
 ]

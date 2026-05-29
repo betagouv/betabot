@@ -4,10 +4,10 @@
 
 ## Overview
 
-Two-phase pipeline: **fetch** raw data (`get-data.sh`) then **embed** it into search indices (`build-embeddings.ts`). Run nightly or on demand; restart the bot afterwards (embeddings load into memory at startup).
+Three-phase pipeline: **fetch** raw data (`get-data.sh`), **embed** into search indices (`build-embeddings.ts`), and **build** the SQLite database (`build-db.ts`). Run nightly or on demand; restart the bot afterwards.
 
 ```sh
-./get-data.sh && npm run embed -- --force
+./get-data.sh && npm run embed -- --force && npm run build-db
 ```
 
 ---
@@ -135,7 +135,7 @@ Per file, two chunk types are produced (see **Markdown parsing** below):
 
 Sections with `content.length < 30` are skipped (shorter than that are noise).
 
-Embedding text per chunk: `"[{breadcrumb}]\n{content}"`
+Embedding text per chunk: `"[{breadcrumb}]\n{content}"` — `content` is truncated to 6000 chars before embedding to stay within model token limits.
 
 Outputs: `data/doc.incubateur.net/docs.embeddings.bin`, `data/doc.incubateur.net/docs.bm25.json`, `data/doc.incubateur.net/docs.index.json`
 
@@ -201,6 +201,63 @@ Index entry type:
 
 ---
 
+## Phase 3 — SQLite database (`build-db.ts`)
+
+```sh
+npm run build-db
+```
+
+Reads JSON data files and creates `data/betabot.db`. Overwrites any existing DB. Uses `node:sqlite` built-in (Node 24 — no extra dependency). Four sequential jobs, each wrapped in a transaction.
+
+### Schema
+
+```sql
+CREATE TABLE members (id TEXT PRIMARY KEY, fullname TEXT, domaine TEXT, role TEXT);
+CREATE TABLE member_competences (member_id TEXT, competence TEXT);
+
+CREATE TABLE incubators (id TEXT PRIMARY KEY, title TEXT, contact TEXT, website TEXT);
+
+CREATE TABLE startups (
+  id TEXT PRIMARY KEY, name TEXT, pitch TEXT,
+  incubator_id TEXT,           -- from JSONAPI relationships.incubator.data.id
+  active_member_count INTEGER DEFAULT 0,
+  current_phase TEXT,          -- denormalized: name of the phase with the latest start date
+  accessibility_status TEXT
+);
+CREATE TABLE startup_phases (startup_id TEXT, name TEXT, start_date TEXT, end_date TEXT);
+CREATE TABLE startup_members (startup_id TEXT, member_id TEXT, status TEXT);
+  -- status: 'active' | 'previous' | 'expired'
+CREATE TABLE startup_thematiques (startup_id TEXT, thematique TEXT);
+CREATE TABLE startup_technos (startup_id TEXT, techno TEXT);
+```
+
+### Job 1 — Members
+
+Source: `data/index/members.json`
+
+Inserts one row per member into `members`; one row per competence string into `member_competences`.
+
+### Job 2 — Incubators
+
+Source: `data/API/incubators.json` (dict keyed by slug)
+
+Inserts one row per incubator into `incubators`.
+
+### Job 3 — Startups
+
+Source: `data/API/startups.json` (JSONAPI — `data[].attributes` + `data[].relationships.incubator.data.id`)
+
+- `current_phase` = name of the phase entry with the latest `start` date (computed at build time).
+- Also populates `startup_phases`, `startup_thematiques`, `startup_technos`.
+
+### Job 4 — Startup members
+
+Source: `data/API/startups_details.json` (dict keyed by startup slug, fields: `active_members[]`, `previous_members[]`, `expired_members[]`)
+
+Inserts rows into `startup_members` with status `active`, `previous`, or `expired`. Updates `startups.active_member_count`.
+
+---
+
 ## Markdown parsing (`src/markdown.ts`)
 
 Used by Job 4. Two exported functions.
@@ -240,4 +297,5 @@ Wraps `gray-matter`. Returns `{ data: Record<string, unknown>, body: string }`.
 | -------------------------- | ----------------------------------------------------- |
 | `npm run embed`            | `node --import tsx build-embeddings.ts`               |
 | `npm run embed -- --force` | rebuilds all jobs regardless of existing `.bin` files |
+| `npm run build-db`         | `node --import tsx build-db.ts`                       |
 | `npm run get-data`         | `sh get-data.sh`                                      |

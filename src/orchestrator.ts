@@ -27,11 +27,16 @@ import {
   tools as incubatorTools,
   handlers as incubatorHandlers,
 } from "./tools/incubators.js";
+import {
+  tools as sqliteTools,
+  handlers as sqliteHandlers,
+} from "./tools/sqlite.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
 de la documentation et des actualités. uniquement des données publiques. Utilise toujours les outils pour répondre
 aux questions factuelles. Ne devine pas les noms ou les données.
+Pour les questions statistiques ou d'agrégation (comptages, classements, distributions), utilise l'outil query_data avec du SQL plutôt que de chaîner plusieurs recherches sémantiques.
 Tu emploies le tutoiement respecteux, utilise du markdown riche et un peu d'emojis.
 Tes réponses sont concises et vont à l'essentiel.
 
@@ -69,6 +74,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...calendarTools,
   ...videoTools,
   ...incubatorTools,
+  ...sqliteTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -82,6 +88,7 @@ const ALL_HANDLERS: Record<
   ...calendarHandlers,
   ...videoHandlers,
   ...incubatorHandlers,
+  ...sqliteHandlers,
 };
 
 export class Orchestrator {
