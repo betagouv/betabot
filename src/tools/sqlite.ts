@@ -7,10 +7,11 @@ const DB_PATH = path.join(config.dataDir, "betabot.db");
 
 const SCHEMA = `
 Tables:
-  members(id, fullname, domaine, role)
+  members(id, fullname, domaine, role, created_at)  -- created_at: date de la première mission (YYYY-MM-DD)
   member_competences(member_id, competence)
   incubators(id, title, contact, website)
-  startups(id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status)
+  startups(id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status, created_at)
+    created_at: date de la première phase (YYYY-MM-DD)
     current_phase: dernière phase (ex: 'investigation', 'construction', 'acceleration', 'transfere', 'abandon', 'abandon-investigation'…)
     accessibility_status: 'conforme'|'non conforme'|'partiellement conforme'|null
   startup_phases(startup_id, name, start_date, end_date)

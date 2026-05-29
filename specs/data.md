@@ -212,7 +212,8 @@ Reads JSON data files and creates `data/betabot.db`. Overwrites any existing DB.
 ### Schema
 
 ```sql
-CREATE TABLE members (id TEXT PRIMARY KEY, fullname TEXT, domaine TEXT, role TEXT);
+CREATE TABLE members (id TEXT PRIMARY KEY, fullname TEXT, domaine TEXT, role TEXT, created_at TEXT);
+  -- created_at: min(missions[].start) from API/members.json — date of first mission (YYYY-MM-DD)
 CREATE TABLE member_competences (member_id TEXT, competence TEXT);
 
 CREATE TABLE incubators (id TEXT PRIMARY KEY, title TEXT, contact TEXT, website TEXT);
@@ -222,7 +223,8 @@ CREATE TABLE startups (
   incubator_id TEXT,           -- from JSONAPI relationships.incubator.data.id
   active_member_count INTEGER DEFAULT 0,
   current_phase TEXT,          -- denormalized: name of the phase with the latest start date
-  accessibility_status TEXT
+  accessibility_status TEXT,
+  created_at TEXT              -- denormalized: min(phases[].start) — date of first phase (YYYY-MM-DD)
 );
 CREATE TABLE startup_phases (startup_id TEXT, name TEXT, start_date TEXT, end_date TEXT);
 CREATE TABLE startup_members (startup_id TEXT, member_id TEXT, status TEXT);

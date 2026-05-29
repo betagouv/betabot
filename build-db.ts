@@ -17,6 +17,11 @@ interface MemberIndex {
   competences: string[];
 }
 
+interface RawMember {
+  id: string;
+  missions?: Array<{ start: string }>;
+}
+
 interface RawIncubator {
   title: string;
   contact: string;
@@ -72,7 +77,8 @@ db.exec(`
     id TEXT PRIMARY KEY,
     fullname TEXT,
     domaine TEXT,
-    role TEXT
+    role TEXT,
+    created_at TEXT
   );
   CREATE TABLE member_competences (
     member_id TEXT,
@@ -95,7 +101,8 @@ db.exec(`
     incubator_id TEXT,
     active_member_count INTEGER DEFAULT 0,
     current_phase TEXT,
-    accessibility_status TEXT
+    accessibility_status TEXT,
+    created_at TEXT
   );
   CREATE INDEX idx_startups_incubator ON startups(incubator_id);
   CREATE INDEX idx_startups_phase ON startups(current_phase);
@@ -132,14 +139,21 @@ db.exec(`
 
 console.log("\n[1/4] Loading members…");
 const members = readJson<MemberIndex[]>(path.join(DATA_DIR, "index/members.json"));
+const rawMembers = readJson<RawMember[]>(path.join(DATA_DIR, "API/members.json"));
+const createdAtMap = new Map<string, string | null>(
+  rawMembers.map((m) => {
+    const starts = (m.missions ?? []).map((ms) => ms.start).filter(Boolean).sort();
+    return [m.id, starts[0] ?? null];
+  })
+);
 
-const insertMember = db.prepare("INSERT INTO members VALUES (?, ?, ?, ?)");
+const insertMember = db.prepare("INSERT INTO members VALUES (?, ?, ?, ?, ?)");
 const insertCompetence = db.prepare("INSERT INTO member_competences VALUES (?, ?)");
 
 db.exec("BEGIN");
 try {
   for (const m of members) {
-    insertMember.run(m.id, m.fullname ?? null, m.domaine ?? null, m.role ?? null);
+    insertMember.run(m.id, m.fullname ?? null, m.domaine ?? null, m.role ?? null, createdAtMap.get(m.id) ?? null);
     for (const c of m.competences ?? []) {
       insertCompetence.run(m.id, c);
     }
@@ -180,7 +194,7 @@ const startupsApi = readJson<StartupsJSONAPI>(
 );
 
 const insertStartup = db.prepare(
-  "INSERT OR IGNORE INTO startups (id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status) VALUES (?, ?, ?, ?, 0, ?, ?)"
+  "INSERT OR IGNORE INTO startups (id, name, pitch, incubator_id, active_member_count, current_phase, accessibility_status, created_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)"
 );
 const insertPhase = db.prepare(
   "INSERT INTO startup_phases VALUES (?, ?, ?, ?)"
@@ -201,6 +215,7 @@ try {
       b.start.localeCompare(a.start)
     );
     const currentPhase = phases[0]?.name ?? null;
+    const createdAt = phases[phases.length - 1]?.start ?? null;
 
     insertStartup.run(
       item.id,
@@ -208,7 +223,8 @@ try {
       attrs.pitch ?? null,
       incubatorId,
       currentPhase,
-      attrs.accessibility_status ?? null
+      attrs.accessibility_status ?? null,
+      createdAt
     );
 
     for (const p of attrs.phases ?? []) {
