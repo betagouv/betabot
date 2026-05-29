@@ -292,7 +292,7 @@ async function buildDocsEmbeddings() {
         breadcrumb: section.breadcrumb,
         excerpt: excerpt(section.content),
       });
-      texts.push(`[${section.breadcrumb}]\n${section.content}`);
+      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
     }
   }
 
