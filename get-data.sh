@@ -19,6 +19,10 @@ if [ -d "$DATA_DIR/doc.incubateur.net" ]; then
 else
   git clone https://github.com/betagouv/doc.incubateur.net-communaute --depth=500 "$DATA_DIR/doc.incubateur.net"
 fi
+# dont embed internal instructions
+rm -r "$DATA_DIR/doc.incubateur.net/les-standards/.adrs" || true
+rm -r "$DATA_DIR/doc.incubateur.net/les-standards/STANDARD.md" || true
+rm -r "$DATA_DIR/doc.incubateur.net/les-standards/TYPOGRAPHIE.md" || true
 
 
 mkdir -p "$DATA_DIR/peertube"

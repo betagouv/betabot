@@ -66,7 +66,7 @@ const searchDocsTool: ChatCompletionTool = {
   function: {
     name: "search_docs",
     description:
-      "Recherche dans la documentation de la communauté beta.gouv.fr (doc.incubateur.net). Utilise get_doc_page pour récupérer le contenu complet d'un résultat. Methodologie, Culture, Processes, Marchés, Services et outils, Contacts, équipes et référent.e.s pour la communauté...",
+      "Recherche dans la documentation de la communauté beta.gouv.fr (doc.incubateur.net). Utilise get_doc_page pour récupérer le contenu complet d'un résultat. Methodologie, Culture, Processes, Marchés, Services et outils, Standards, Contacts, équipes et référent.e.s pour la communauté...",
     parameters: {
       type: "object",
       properties: {
