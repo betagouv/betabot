@@ -36,6 +36,10 @@ export const config = {
     commandRoomsLabel: process.env["MATRIX_COMMAND_ROOMS_LABEL"],
     dimailRooms: optionalList("MATRIX_DIMAIL_ROOMS"),
     adminUsers: optionalList("MATRIX_ADMIN_USERS"),
+    managedSpace: process.env["MATRIX_MANAGED_SPACE"],
+    roomInactivityWarn: process.env["MATRIX_ROOM_INACTIVITY_WARN"],
+    roomInactivityDelete: process.env["MATRIX_ROOM_INACTIVITY_DELETE"],
+    roomInactivityCheckEvery: process.env["MATRIX_ROOM_INACTIVITY_CHECK_EVERY"],
   },
   dimail: {
     url: process.env["DIMAIL_URL"],

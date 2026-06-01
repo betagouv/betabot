@@ -10,9 +10,11 @@ import { marked } from "marked";
 import { config } from "../config.js";
 import type { Orchestrator } from "../orchestrator.js";
 import { handleEmailsCommand } from "../commands/emails.js";
+import { handleRoomsCommand } from "../commands/rooms.js";
 import { record, query, formatHistory } from "../commands/history.js";
+import { parseDuration, sweepInactiveRooms } from "../inactivity.js";
 
-const KNOWN_COMMANDS = ["/test", "/emails", "/historique"] as const;
+const KNOWN_COMMANDS = ["/test", "/emails", "/historique", "/salon"] as const;
 
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
@@ -346,6 +348,9 @@ export class MatrixConnector {
     console.log(
       `[Matrix] Connected as ${this.ownUserId} / ${this.ownDeviceId} / displayName="${this.ownDisplayName}"`,
     );
+
+    await this.loadDirectRooms();
+    this.startInactivityWatcher();
 
     process.on("SIGINT", () => {
       this.client.stop();
@@ -875,12 +880,30 @@ export class MatrixConnector {
         return;
       }
 
+      if (text === "/salon" || text.startsWith("/salon ")) {
+        // Open to everyone: `create`/`list` need no role; `delete` checks that
+        // the requester is moderator+ in the target room (see commands/rooms.ts).
+        const result = await handleRoomsCommand(
+          this.client,
+          config.matrix.managedSpace,
+          this.ownUserId,
+          sender,
+          config.matrix.adminUsers.includes(sender),
+          text,
+        );
+        await this.sendReaction(roomId, userEventId, result.reaction);
+        await this.sendMessage(roomId, result.message, userEventId, threadRoot);
+        const status: "ok" | "error" = result.reaction === "❌" || result.reaction === "⛔" ? "error" : "ok";
+        record({ user: sender, room: roomId, kind: "slash", text, status, detail: result.reaction });
+        return;
+      }
+
       const unknownCmd = text.split(/\s+/)[0] || "/?";
       const suggestion = suggestCommand(unknownCmd);
       await this.sendReaction(roomId, userEventId, "❌");
       await this.sendMessage(
         roomId,
-        `❌ Commande inconnue : \`${unknownCmd}\`.${suggestion ? ` Voulais-tu dire \`${suggestion}\` ?` : ""}\n\nCommandes disponibles : \`/test\`, \`/emails\`, \`/historique\`.`,
+        `❌ Commande inconnue : \`${unknownCmd}\`.${suggestion ? ` Voulais-tu dire \`${suggestion}\` ?` : ""}\n\nCommandes disponibles : \`/test\`, \`/emails\`, \`/historique\`, \`/salon\`.`,
         userEventId,
         threadRoot,
       );
@@ -949,6 +972,71 @@ export class MatrixConnector {
       console.error("[Matrix] Failed to send reaction:", err);
       return null;
     }
+  }
+
+  // Pre-populate the DM set from the server-side `m.direct` account data so the
+  // bot recognises existing direct rooms after a restart (the in-memory set is
+  // otherwise only filled by fresh `is_direct` invites).
+  private async loadDirectRooms(): Promise<void> {
+    try {
+      const direct = (await this.client.getAccountData("m.direct")) as
+        | Record<string, string[]>
+        | undefined;
+      if (!direct) return;
+      let count = 0;
+      for (const roomIds of Object.values(direct)) {
+        for (const roomId of roomIds ?? []) {
+          if (roomId) {
+            this.dmRooms.add(roomId);
+            count++;
+          }
+        }
+      }
+      console.log(`[Matrix] Loaded ${count} DM room(s) from m.direct`);
+    } catch (err) {
+      // 404 = no m.direct account data yet; anything else we just log and skip.
+      console.log(
+        `[Matrix] No m.direct account data loaded (${(err as Error).message})`,
+      );
+    }
+  }
+
+  // Periodically warn, then delete, bot-created rooms that go silent.
+  // Controlled by MATRIX_ROOM_INACTIVITY_WARN / _DELETE (and optional _CHECK_EVERY).
+  private startInactivityWatcher(): void {
+    const warnMs = parseDuration(config.matrix.roomInactivityWarn);
+    const deleteMs = parseDuration(config.matrix.roomInactivityDelete);
+    if (warnMs === null || deleteMs === null) {
+      console.log(
+        "[inactivity] disabled (set MATRIX_ROOM_INACTIVITY_WARN and MATRIX_ROOM_INACTIVITY_DELETE to enable)",
+      );
+      return;
+    }
+    if (warnMs >= deleteMs) {
+      console.warn(
+        "[inactivity] disabled: WARN delay must be shorter than DELETE delay",
+      );
+      return;
+    }
+    const everyMs =
+      parseDuration(config.matrix.roomInactivityCheckEvery) ?? 15 * 60_000;
+
+    const tick = () => {
+      void sweepInactiveRooms(
+        this.client,
+        config.matrix.managedSpace,
+        this.ownUserId,
+        warnMs,
+        deleteMs,
+        (roomId, text) => this.sendMessage(roomId, text),
+      ).catch((e) => console.error("[inactivity] sweep error:", e));
+    };
+
+    setInterval(tick, everyMs);
+    setTimeout(tick, 10_000); // first pass shortly after startup
+    console.log(
+      `[inactivity] enabled — warn after ${config.matrix.roomInactivityWarn}, delete after ${config.matrix.roomInactivityDelete}, check every ${Math.round(everyMs / 1000)}s`,
+    );
   }
 
   private async isDMRoom(roomId: string): Promise<boolean> {

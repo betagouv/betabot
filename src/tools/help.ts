@@ -23,6 +23,9 @@ export function buildHelp(): string {
   const dimailDomain =
     config.dimail.domain || "(non configuré, DIMAIL_DOMAIN vide)";
 
+  const managedSpace =
+    config.matrix.managedSpace || "(désactivé — MATRIX_MANAGED_SPACE vide)";
+
   return `# Aide betabot
 
 ## Comment me solliciter
@@ -66,6 +69,17 @@ export function buildHelp(): string {
 **Exemples** :
 - \`/emails join cartobio jean.louis@beta.gouv.fr\`
 - \`/emails join contact@covoiturage.beta.gouv.fr jean.louis@beta.gouv.fr\`
+
+### \`/salon\` — gestion des salons d'un espace
+- **Où** : ${cmdWhere}
+- **Espace géré** : ${managedSpace}
+
+| Sous-commande | Qui | Description |
+|---|---|---|
+| \`/salon list\` | tout le monde | Liste les salons de l'espace géré |
+| \`/salon create <nom>\` | tout le monde | Crée un salon chiffré, t'y invite, et le rattache à l'espace |
+| \`/salon delete <nom>\` | modérateur+ du salon ciblé | Ferme le salon : détache de l'espace + expulse les membres + le bot quitte |
+| \`/salon role <nom> <@user> <niveau>\` | admin (\`MATRIX_ADMIN_USERS\`) | Change le niveau d'une personne dans le salon (membre/moderateur/admin ou 0–100) |
 
 ## Capacités en langage naturel
 

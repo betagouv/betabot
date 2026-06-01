@@ -78,20 +78,67 @@ cp .env.example .env
 # edit .env
 ```
 
-```env
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama
-OPENAI_MODEL=qwen2.5:14b
-OPENAI_EMBED_MODEL=nomic-embed-text
-EMBED_DIMS=768
+#### Environment variables
 
-DATA_DIR=./data
+| Variable | Required | What it does |
+|---|---|---|
+| `OPENAI_BASE_URL` | ✅ | OpenAI-compatible endpoint for the LLM + embeddings (e.g. Ollama at `http://localhost:11434/v1`). |
+| `OPENAI_API_KEY` | ✅ | API key for that endpoint (`ollama` for a local Ollama). |
+| `OPENAI_MODEL` | ✅ | Tool-calling chat model, e.g. `qwen2.5:14b`. |
+| `OPENAI_EMBED_MODEL` | ✅ | Embedding model used by `npm run embed`, e.g. `nomic-embed-text`. |
+| `EMBED_DIMS` | ✅ | Embedding vector size — **must match** the embed model (768 for `nomic-embed-text`, 1024 for `bge-m3`). |
+| `DATA_DIR` | ✅ | Where snapshots, embeddings, crypto store and session live (default `./data`). |
+| `MATRIX_HOMESERVER` | ✅ | Homeserver base URL, e.g. `https://matrix.agent.dinum.tchap.gouv.fr`. |
+| `MATRIX_USER` | ✅ | Bot's full Matrix ID, e.g. `@betabot:agent.dinum.tchap.gouv.fr`. |
+| `MATRIX_ACCESS_TOKEN` | ✅* | Access token for the bot's **dedicated device** (see [Getting the access token](#getting-the-access-token-important)). |
+| `MATRIX_PASSWORD` | ✅* | Alternative to the token: the bot logs in at startup. *Provide either the token or the password.* |
+| `MATRIX_DEVICE_ID` | — | Optional, only read before the very first start; ignored once a session exists. |
+| `MATRIX_ALLOWED_ROOMS` | — | Comma-separated room IDs to restrict the bot to. Empty = responds everywhere it's invited. |
+| `MATRIX_COMMAND_ROOMS` | — | Rooms where slash commands (`/test`, `/emails`, `/historique`) are accepted. Empty = allowed wherever the bot responds. |
+| `MATRIX_COMMAND_ROOMS_LABEL` | — | Human-readable name shown instead of the raw room ID when a command is refused (e.g. `Salon Admin betabot`). |
+| `MATRIX_DIMAIL_ROOMS` | — | Rooms where the DiMail mailing-list tools are exposed to the LLM. Empty = DiMail disabled. |
+| `MATRIX_ADMIN_USERS` | — | Comma-separated Matrix IDs allowed to run admin commands like `/historique` and `/salon`. Empty = nobody. |
+| `MATRIX_MANAGED_SPACE` | — | Space the bot may create/close rooms in via `/salon`. The bot needs power ≥ the space's `m.space.child` level (usually 100). Empty = `/salon` disabled. |
+| `MATRIX_ROOM_INACTIVITY_WARN` | — | After this long with no new message, the bot **warns** in a room it created (`/salon create`). Duration like `7d`, `12h`, `90m` (bare number = minutes). |
+| `MATRIX_ROOM_INACTIVITY_DELETE` | — | After this long with no new message, the bot **closes** that room. Must be longer than the warn delay. Both must be set to enable auto-cleanup. |
+| `MATRIX_ROOM_INACTIVITY_CHECK_EVERY` | — | How often to scan for inactive rooms (default `15m`). |
+| `DIMAIL_URL` | — | DiMail API base URL (mailing lists / aliases). |
+| `DIMAIL_USER` / `DIMAIL_PASSWORD` | — | DiMail credentials; used to fetch a token when `DIMAIL_TOKEN` is empty. |
+| `DIMAIL_DOMAIN` | — | Default mail domain used to resolve a bare list name (e.g. `cartobio` → `cartobio@<domain>`). |
+| `DIMAIL_TOKEN` | — | Pre-existing DiMail Bearer token; if set, `DIMAIL_USER`/`PASSWORD` are not needed. |
 
-MATRIX_HOMESERVER=https://matrix.example.org
-MATRIX_USER=@betabot:example.org
-MATRIX_ACCESS_TOKEN=syt_...       # or use MATRIX_PASSWORD instead
-# MATRIX_DEVICE_ID=ABCDEFGH      # optional — only needed before first start; ignored once credentials.json exists
+\* Either `MATRIX_ACCESS_TOKEN` **or** `MATRIX_PASSWORD` must be set.
+
+#### Getting the access token (important)
+
+> ⚠️ **Take the token from a `curl` login, _not_ from the Tchap/Element web client.**
+>
+> A token copied from a browser session belongs to a device whose **end-to-end encryption is already managed by that web client**. The bot cannot co-manage the same device's crypto: it ends up unable to share its message keys, so users see *"Déchiffrement en cours…"*, and you hit `One time key … already exists` errors on startup.
+>
+> Logging in with `curl` mints a **fresh, dedicated device** that the bot alone owns — clean E2E, no conflicts.
+
+Run this once and copy the returned `access_token` into `MATRIX_ACCESS_TOKEN`:
+
+```sh
+curl -XPOST -H "Content-Type: application/json" \
+  -d '{
+    "type": "m.login.password",
+    "identifier": { "type": "m.id.user", "user": "@betabot:example.org" },
+    "password": "<bot-account-password>",
+    "initial_device_display_name": "betabot"
+  }' \
+  https://matrix.example.org/_matrix/client/r0/login
 ```
+
+Response:
+
+```json
+{ "access_token": "mct_…", "device_id": "Cc8zy2CNm6", "user_id": "@betabot:example.org" }
+```
+
+- Put `access_token` into `MATRIX_ACCESS_TOKEN`.
+- Keep this token secret — it grants full access to the bot account. Never commit it or paste it in screenshots; rotate it (log the device out) if it leaks.
+- Each `curl` login creates a **new** device. If you re-mint a token, delete `data/crypto` so the bot rebuilds a clean store for the new device.
 
 ### 3. Fetch data
 
