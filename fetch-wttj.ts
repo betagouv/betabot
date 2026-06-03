@@ -52,7 +52,7 @@ function jobToMarkdown(job: WttjJob, org: string): string {
   const country = job.office?.country_code ?? "";
   const location = [city, country].filter(Boolean).join(", ");
   const orgSlug = orgs.find((o) => o.id === org)?.slug;
-  const jobUrl = `https://www.welcometothejungle.com/fr/companies/${orgSlug}/`;
+  const jobUrl = `https://www.welcometothejungle.com/fr/companies/${orgSlug}/jobs`;
 
   const lines: string[] = [
     "---",
