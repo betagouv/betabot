@@ -191,12 +191,13 @@ const WELCOME_MESSAGE = `Bonjour ! 👋 Je suis l'assistant de la communauté [b
 Je peux t'aider à :
 - 👤 **Trouver un membre** de la communauté
 - 🚀 **Chercher une startup** ou un produit
-- 📁 **Explorer les dépôts** de code
-- 📖 **Consulter la documentation** de l'incubateur
+- 📁 **Explorer les dépôts** de code de la communauté
+- 📖 **Consulter la documentation** beta.gouv.fr
 - 📖 **Consulter les documentations** de ProConnect, FranceConnect ou du design système de l'état
 - 📅 **Vérifier l'agenda** de la communauté
 - 🎥 **Retrouver des vidéos** et ressources
 - 🏢 **Découvrir les incubateurs**
+- 💡 **Consultez les offres d'emploi** et missions
 
 Pose-moi une question ou mentionne-moi dans un salon !`;
 
