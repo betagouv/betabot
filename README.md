@@ -1,6 +1,6 @@
 # betabot
 
-Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, and videos.
+Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, and web-crawled documentation for ProConnect, FranceConnect, and the Design Système de l'État (DSFR).
 
 Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls.
 
@@ -17,6 +17,9 @@ Detailed specs : [./specs](./specs)
 - _Comment organiser une visio selon la doc ?_
 - _Quels sont les prochains événements de la communauté ?_
 - _Quelles vidéos récentes sur les BlueHats ?_
+- _Comment intégrer ProConnect avec OIDC ?_
+- _Quelle est la différence entre FranceConnect et AgentConnect ?_
+- _Comment utiliser les boutons du DSFR ?_
 
 ---
 
@@ -39,7 +42,11 @@ Tool dispatcher
   ├── search_members / get_member_detail / get_member_startups
   ├── search_startups / get_startup_detail / get_startup_members
   ├── search_repos / get_repo_detail
-  ├── search_docs / get_doc_page
+  ├── search_incubators / get_incubator_detail
+  ├── search_docs / get_doc_page            (doc.incubateur.net)
+  ├── search_docs_proconnect / get_doc_proconnect_page
+  ├── search_docs_franceconnect / get_doc_franceconnect_page
+  ├── search_docs_dsfr / get_doc_dsfr_page
   ├── get_calendar
   ├── search_videos
   └── get_videos
@@ -99,7 +106,23 @@ MATRIX_ACCESS_TOKEN=syt_...       # or use MATRIX_PASSWORD instead
 ./get-data.sh
 ```
 
-This downloads the API snapshots, calendar, and PeerTube feeds into `data/`.
+This downloads the API snapshots, calendar, and PeerTube feeds into `data/`, and crawls web-based documentation sources into `data/docs-*`.
+
+Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee](https://crawlee.dev) with [Readability](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown):
+
+| Source | URL | Output |
+|--------|-----|--------|
+| beta.gouv.fr community docs | pre-fetched via GitBook export | `data/doc.incubateur.net/` |
+| ProConnect | `https://partenaires.proconnect.gouv.fr/docs` | `data/docs-proconnect/` |
+| FranceConnect | `https://docs.partenaires.franceconnect.gouv.fr` | `data/docs-franceconnect/` |
+| DSFR (premiers pas) | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
+| DSFR (fondamentaux) | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
+
+To crawl a new documentation site manually:
+
+```sh
+npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
+```
 
 ### 4. Build embeddings
 
@@ -107,7 +130,7 @@ This downloads the API snapshots, calendar, and PeerTube feeds into `data/`.
 npm run embed
 ```
 
-Embeds chunks across 6 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
+Embeds chunks across 9 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
 
 ```sh
 npm run embed -- --force
