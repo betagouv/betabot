@@ -66,6 +66,7 @@ Pour les questions liées à notre actualité, utilise ces données:
 
 Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - une startup, une produit, une équipe, créé un lien vers https://beta.gouv.fr/startups/[ghid]
+ - un incubateur, créé un lien vers https://beta.gouv.fr/incubateurs/[id]
  - un membre de la communauté, créé un lien vers https://espace-membre.beta.gouv.fr/community/[username]
  - un repository ou commit GIT, créé un lien vers https://github.com/[ORG]/[REPO]
  - une PR ou issue GIT, créé un lien vers https://github.com/[ORG]/[REPO]/issues/[ID]
