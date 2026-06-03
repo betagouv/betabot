@@ -39,6 +39,10 @@ import {
   tools as franceconnectDocTools,
   handlers as franceconnectDocHandlers,
 } from "./tools/docs-franceconnect.js";
+import {
+  tools as dsfrDocTools,
+  handlers as dsfrDocHandlers,
+} from "./tools/docs-dsfr.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -48,9 +52,6 @@ Pour les questions statistiques ou d'agrégation (comptages, classements, distri
 Tu emploies le tutoiement respecteux, utilise du markdown riche et un peu d'emojis.
 Tes réponses sont concises et vont à l'essentiel.
 Tu utilises le modèle de language open weight "${process.env.OPENAI_MODEL}" hébergé sur une infrastructure souveraine.
-
-Pour les questions sur ProConnect, OIDC ou OpenID Connect, utilise search_docs_proconnect.
-Pour les questions sur FranceConnect, utilise search_docs_franceconnect.
 
 Pour les questions liées à notre actualité, utilise ces données:
  - calendrier
@@ -69,6 +70,7 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - la documentation beta.gouv.fr, crée un lien vers https://doc.incubateur.net/[PATH] sans le suffixe \`.md\` et sans le suffixe \`README\`.
  - la documentation ProConnect, crée un lien vers https://partenaires.proconnect.gouv.fr/docs/[PATH]
  - la documentation FranceConnect, crée un lien vers https://docs.partenaires.franceconnect.gouv.fr/[PATH]
+ - la documentation DSFR, crée un lien vers https://www.systeme-de-design.gouv.fr/[PATH]
  - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
 
 Cite tes sources avec leurs URLS en fin de message
@@ -77,6 +79,8 @@ Cite tes sources avec leurs URLS en fin de message
  - [site beta.gouv.fr](https://beta.gouv.fr)
  - [standards des produits beta.gouv.fr](https://standards.beta.gouv.fr)
  - ton code source est dispo sur github.com/betagouv/betabot
+ - expliquer la requete SQL utilisée s'il y en a
+ - ne mentionne pas les tools utilisés ou leur parametres
 `;
 
 const MAX_HISTORY = 20;
@@ -93,6 +97,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...sqliteTools,
   ...proconnectDocTools,
   ...franceconnectDocTools,
+  ...dsfrDocTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -109,6 +114,7 @@ const ALL_HANDLERS: Record<
   ...sqliteHandlers,
   ...proconnectDocHandlers,
   ...franceconnectDocHandlers,
+  ...dsfrDocHandlers,
 };
 
 export class Orchestrator {

@@ -193,6 +193,7 @@ Je peux t'aider à :
 - 🚀 **Chercher une startup** ou un produit
 - 📁 **Explorer les dépôts** de code
 - 📖 **Consulter la documentation** de l'incubateur
+- 📖 **Consulter les documentations** de ProConnect, FranceConnect ou du design système de l'état
 - 📅 **Vérifier l'agenda** de la communauté
 - 🎥 **Retrouver des vidéos** et ressources
 - 🏢 **Découvrir les incubateurs**
@@ -719,12 +720,7 @@ export class MatrixConnector {
         const replyText =
           base +
           "\n\n---\n*[Partager un retour](https://github.com/betagouv/betabot/issues/new)*";
-        await this.sendMessage(
-          roomId,
-          replyText,
-          userEventId,
-          threadRoot,
-        );
+        await this.sendMessage(roomId, replyText, userEventId, threadRoot);
       })
       .catch(async (err: unknown) => {
         console.error("[Matrix] Orchestrator error:", err);

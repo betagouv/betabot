@@ -121,7 +121,7 @@ function writeJson(filePath: string, data: unknown): void {
 // ─── Job 1: Members ───────────────────────────────────────────────────────────
 
 async function buildMembersEmbeddings() {
-  console.log("\n[1/7] Building members embeddings…");
+  console.log("\n[1/9] Building members embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/members.embeddings.bin"))) return;
   const members = readJson<MemberEntry[]>(
     path.join(DATA_DIR, "index/members.json")
@@ -146,7 +146,7 @@ async function buildMembersEmbeddings() {
 // ─── Job 2: Startups index ───────────────────────────────────────────────────
 
 async function buildStartupsEmbeddings() {
-  console.log("\n[2/7] Building startups index embeddings…");
+  console.log("\n[2/9] Building startups index embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/startups.embeddings.bin"))) return;
   const startups = readJson<StartupEntry[]>(
     path.join(DATA_DIR, "index/startups.json")
@@ -165,7 +165,7 @@ async function buildStartupsEmbeddings() {
 // ─── Job 3: Gitscan repos ────────────────────────────────────────────────────
 
 async function buildReposEmbeddings() {
-  console.log("\n[3/7] Building gitscan repos embeddings…");
+  console.log("\n[3/9] Building gitscan repos embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "gitscan/repos.embeddings.bin"))) return;
   const reposDir = path.join(DATA_DIR, "gitscan/repos");
   const entries: RepoEntry[] = [];
@@ -238,7 +238,7 @@ async function buildReposEmbeddings() {
 // ─── Job 4: Docs ─────────────────────────────────────────────────────────────
 
 async function buildDocsEmbeddings() {
-  console.log("\n[4/7] Building docs embeddings…");
+  console.log("\n[4/9] Building docs embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "doc.incubateur.net/docs.embeddings.bin"))) return;
   const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
   const chunks: DocChunk[] = [];
@@ -316,7 +316,7 @@ async function buildDocsEmbeddings() {
 // ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
 
 async function buildVideosEmbeddings() {
-  console.log("\n[5/7] Building PeerTube videos embeddings…");
+  console.log("\n[5/9] Building PeerTube videos embeddings…");
   const peertubeDir = path.join(DATA_DIR, "peertube");
   const outputBin = path.join(peertubeDir, "videos.embeddings.bin");
   if (shouldSkip(outputBin)) return;
@@ -372,7 +372,7 @@ async function buildVideosEmbeddings() {
 // ─── Job 7: ProConnect docs ──────────────────────────────────────────────────
 
 async function buildProconnectDocsEmbeddings() {
-  console.log("\n[7/8] Building ProConnect docs embeddings…");
+  console.log("\n[7/9] Building ProConnect docs embeddings…");
   const pagesDir = path.join(DATA_DIR, "docs-proconnect");
   const outDir = pagesDir;
   if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
@@ -443,7 +443,7 @@ async function buildProconnectDocsEmbeddings() {
 // ─── Job 6: Incubators ───────────────────────────────────────────────────────
 
 async function buildIncubatorsEmbeddings() {
-  console.log("\n[6/7] Building incubators embeddings…");
+  console.log("\n[6/9] Building incubators embeddings…");
   const outputBin = path.join(DATA_DIR, "API/incubators.embeddings.bin");
   if (shouldSkip(outputBin)) return;
 
@@ -490,7 +490,7 @@ async function buildIncubatorsEmbeddings() {
 // ─── Job 8: FranceConnect docs ───────────────────────────────────────────────
 
 async function buildFranceconnectDocsEmbeddings() {
-  console.log("\n[8/8] Building FranceConnect docs embeddings…");
+  console.log("\n[8/9] Building FranceConnect docs embeddings…");
   const pagesDir = path.join(DATA_DIR, "docs-franceconnect");
   const outDir = pagesDir;
   if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
@@ -558,6 +558,83 @@ async function buildFranceconnectDocsEmbeddings() {
   console.log(`  ✓ ${chunks.length} FranceConnect doc chunks embedded`);
 }
 
+// ─── Job 9: DSFR docs ────────────────────────────────────────────────────────
+
+async function buildDsfrDocsEmbeddings() {
+  console.log("\n[9/9] Building DSFR docs embeddings…");
+  const baseDir = path.join(DATA_DIR, "docs-dsfr");
+  if (shouldSkip(path.join(baseDir, "docs.embeddings.bin"))) return;
+
+  const subdirs = ["premiers-pas", "fondamentaux"].map((s) =>
+    path.join(baseDir, s),
+  );
+  const existingSubdirs = subdirs.filter((d) => fs.existsSync(d));
+
+  if (existingSubdirs.length === 0) {
+    console.log("  ⚠ docs-dsfr subdirectories not found, skipping");
+    return;
+  }
+
+  const chunks: DocChunk[] = [];
+  const texts: string[] = [];
+
+  function walkDir(dir: string) {
+    for (const entry of fs.readdirSync(dir)) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walkDir(fullPath);
+      } else if (entry.endsWith(".md")) {
+        processDocFile(fullPath);
+      }
+    }
+  }
+
+  function processDocFile(filePath: string) {
+    const relativePath = path.relative(baseDir, filePath);
+    let content: string;
+    try {
+      content = fs.readFileSync(filePath, "utf-8");
+    } catch {
+      return;
+    }
+    const { data: fm } = parseFrontmatter(content);
+    const pageTitle =
+      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
+
+    if (fm["description"]) {
+      const desc = String(fm["description"]);
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
+      texts.push(`[${pageTitle}]\n${desc}`);
+    }
+
+    const sections = extractSections(content);
+    for (const section of sections) {
+      if (section.content.length < 30) continue;
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
+      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
+    }
+  }
+
+  for (const dir of existingSubdirs) {
+    walkDir(dir);
+  }
+
+  if (texts.length === 0) {
+    console.log("  ⚠ No DSFR doc files found, skipping");
+    return;
+  }
+
+  const vecs = await embedBatch(texts);
+  saveBin(vecs, path.join(baseDir, "docs.embeddings.bin"));
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(baseDir, "docs.bm25.json"));
+  writeJson(path.join(baseDir, "docs.index.json"), chunks);
+
+  console.log(`  ✓ ${chunks.length} DSFR doc chunks embedded`);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -573,6 +650,7 @@ async function main() {
   await buildIncubatorsEmbeddings();
   await buildProconnectDocsEmbeddings();
   await buildFranceconnectDocsEmbeddings();
+  await buildDsfrDocsEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);
