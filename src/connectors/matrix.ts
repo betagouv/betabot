@@ -721,7 +721,7 @@ export class MatrixConnector {
         const replyText =
           base +
           "\n\n---\n*[Partager un retour](https://github.com/betagouv/betabot/issues/new)*";
-        await this.sendMessage(roomId, replyText, userEventId, threadRoot);
+        await this.sendMessage(roomId, replyText, userEventId, isDM ? undefined : threadRoot);
       })
       .catch(async (err: unknown) => {
         console.error("[Matrix] Orchestrator error:", err);
@@ -729,7 +729,7 @@ export class MatrixConnector {
           roomId,
           "_(Erreur interne, merci de réessayer.)_",
           userEventId,
-          threadRoot,
+          isDM ? undefined : threadRoot,
         );
       });
   }
