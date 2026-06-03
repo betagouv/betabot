@@ -7,6 +7,9 @@ import { reset as reposReset } from "./tools/repos.js";
 import { reset as docsReset } from "./tools/docs.js";
 import { reset as videosReset } from "./tools/videos.js";
 import { reset as incubatorsReset } from "./tools/incubators.js";
+import { reset as proconnectDocsReset } from "./tools/docs-proconnect.js";
+import { reset as franceconnectDocsReset } from "./tools/docs-franceconnect.js";
+import { reset as dsfrDocsReset } from "./tools/docs-dsfr.js";
 
 const FILE_MAP: Record<string, () => void> = {
   "index/members.embeddings.bin":  membersReset,
@@ -27,6 +30,15 @@ const FILE_MAP: Record<string, () => void> = {
   "API/incubators.embeddings.bin":  incubatorsReset,
   "API/incubators.bm25.json":       incubatorsReset,
   "API/incubators.index.json":      incubatorsReset,
+  "docs-proconnect/docs.embeddings.bin": proconnectDocsReset,
+  "docs-proconnect/docs.bm25.json":      proconnectDocsReset,
+  "docs-proconnect/docs.index.json":     proconnectDocsReset,
+  "docs-franceconnect/docs.embeddings.bin": franceconnectDocsReset,
+  "docs-franceconnect/docs.bm25.json":      franceconnectDocsReset,
+  "docs-franceconnect/docs.index.json":     franceconnectDocsReset,
+  "docs-dsfr/docs.embeddings.bin": dsfrDocsReset,
+  "docs-dsfr/docs.bm25.json":      dsfrDocsReset,
+  "docs-dsfr/docs.index.json":     dsfrDocsReset,
 };
 
 const DEBOUNCE_MS = 2000;

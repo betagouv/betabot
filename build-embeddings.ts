@@ -235,12 +235,16 @@ async function buildReposEmbeddings() {
   console.log(`  ✓ ${entries.length} repos embedded`);
 }
 
-// ─── Job 4: Docs ─────────────────────────────────────────────────────────────
+// ─── Shared markdown-docs helper ─────────────────────────────────────────────
 
-async function buildDocsEmbeddings() {
-  console.log("\n[4/9] Building docs embeddings…");
-  if (shouldSkip(path.join(DATA_DIR, "doc.incubateur.net/docs.embeddings.bin"))) return;
-  const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
+async function buildMdDocsEmbeddings(
+  label: string,
+  sourceDirs: string[],
+  outDir: string,
+  emptyMsg = "No doc files found",
+): Promise<void> {
+  if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
+
   const chunks: DocChunk[] = [];
   const texts: string[] = [];
 
@@ -257,60 +261,56 @@ async function buildDocsEmbeddings() {
   }
 
   function processDocFile(filePath: string) {
-    const relativePath = path.relative(docsDir, filePath);
+    const relativePath = path.relative(outDir, filePath);
     let content: string;
     try {
       content = fs.readFileSync(filePath, "utf-8");
     } catch {
       return;
     }
-
     const { data: fm } = parseFrontmatter(content);
     const pageTitle =
-      (fm["title"] as string | undefined) ??
-      path.basename(filePath, ".md");
+      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
 
-    // Intro chunk from front matter description
     if (fm["description"]) {
       const desc = String(fm["description"]);
-      chunks.push({
-        path: relativePath,
-        title: pageTitle,
-        breadcrumb: pageTitle,
-        excerpt: excerpt(desc),
-      });
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
       texts.push(`[${pageTitle}]\n${desc}`);
     }
 
-    // Section chunks
     const sections = extractSections(content);
     for (const section of sections) {
       if (section.content.length < 30) continue;
-      chunks.push({
-        path: relativePath,
-        title: pageTitle,
-        breadcrumb: section.breadcrumb,
-        excerpt: excerpt(section.content),
-      });
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
       texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
     }
   }
 
-  walkDir(docsDir);
+  for (const dir of sourceDirs) {
+    if (fs.existsSync(dir)) walkDir(dir);
+  }
 
   if (texts.length === 0) {
-    console.log("  ⚠ No doc files found, skipping");
+    console.log(`  ⚠ ${emptyMsg}, skipping`);
     return;
   }
 
   const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(docsDir, "docs.embeddings.bin"));
+  saveBin(vecs, path.join(outDir, "docs.embeddings.bin"));
 
   const bm25 = await buildBM25Index(texts);
-  saveBM25Index(bm25, path.join(docsDir, "docs.bm25.json"));
-  writeJson(path.join(docsDir, "docs.index.json"), chunks);
+  saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
+  writeJson(path.join(outDir, "docs.index.json"), chunks);
 
-  console.log(`  ✓ ${chunks.length} doc chunks embedded`);
+  console.log(`  ✓ ${chunks.length} ${label} chunks embedded`);
+}
+
+// ─── Job 4: Docs ─────────────────────────────────────────────────────────────
+
+async function buildDocsEmbeddings() {
+  console.log("\n[4/9] Building docs embeddings…");
+  const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
+  await buildMdDocsEmbeddings("doc", [docsDir], docsDir, "No doc files found");
 }
 
 // ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
@@ -373,71 +373,8 @@ async function buildVideosEmbeddings() {
 
 async function buildProconnectDocsEmbeddings() {
   console.log("\n[7/9] Building ProConnect docs embeddings…");
-  const pagesDir = path.join(DATA_DIR, "docs-proconnect");
-  const outDir = pagesDir;
-  if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
-
-  if (!fs.existsSync(pagesDir)) {
-    console.log("  ⚠ docs-proconnect/pages directory not found, skipping");
-    return;
-  }
-
-  const chunks: DocChunk[] = [];
-  const texts: string[] = [];
-
-  function walkDir(dir: string) {
-    for (const entry of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, entry);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.endsWith(".md")) {
-        processDocFile(fullPath);
-      }
-    }
-  }
-
-  function processDocFile(filePath: string) {
-    const relativePath = path.relative(pagesDir, filePath);
-    let content: string;
-    try {
-      content = fs.readFileSync(filePath, "utf-8");
-    } catch {
-      return;
-    }
-    const { data: fm } = parseFrontmatter(content);
-    const pageTitle =
-      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
-
-    if (fm["description"]) {
-      const desc = String(fm["description"]);
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
-      texts.push(`[${pageTitle}]\n${desc}`);
-    }
-
-    const sections = extractSections(content);
-    for (const section of sections) {
-      if (section.content.length < 30) continue;
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
-      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
-    }
-  }
-
-  walkDir(pagesDir);
-
-  if (texts.length === 0) {
-    console.log("  ⚠ No ProConnect doc files found, skipping");
-    return;
-  }
-
-  const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(outDir, "docs.embeddings.bin"));
-
-  const bm25 = await buildBM25Index(texts);
-  saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
-  writeJson(path.join(outDir, "docs.index.json"), chunks);
-
-  console.log(`  ✓ ${chunks.length} ProConnect doc chunks embedded`);
+  const dir = path.join(DATA_DIR, "docs-proconnect");
+  await buildMdDocsEmbeddings("ProConnect", [dir], dir, "No ProConnect doc files found");
 }
 
 // ─── Job 6: Incubators ───────────────────────────────────────────────────────
@@ -491,71 +428,8 @@ async function buildIncubatorsEmbeddings() {
 
 async function buildFranceconnectDocsEmbeddings() {
   console.log("\n[8/9] Building FranceConnect docs embeddings…");
-  const pagesDir = path.join(DATA_DIR, "docs-franceconnect");
-  const outDir = pagesDir;
-  if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
-
-  if (!fs.existsSync(pagesDir)) {
-    console.log("  ⚠ docs-franceconnect/pages directory not found, skipping");
-    return;
-  }
-
-  const chunks: DocChunk[] = [];
-  const texts: string[] = [];
-
-  function walkDir(dir: string) {
-    for (const entry of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, entry);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.endsWith(".md")) {
-        processDocFile(fullPath);
-      }
-    }
-  }
-
-  function processDocFile(filePath: string) {
-    const relativePath = path.relative(pagesDir, filePath);
-    let content: string;
-    try {
-      content = fs.readFileSync(filePath, "utf-8");
-    } catch {
-      return;
-    }
-    const { data: fm } = parseFrontmatter(content);
-    const pageTitle =
-      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
-
-    if (fm["description"]) {
-      const desc = String(fm["description"]);
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
-      texts.push(`[${pageTitle}]\n${desc}`);
-    }
-
-    const sections = extractSections(content);
-    for (const section of sections) {
-      if (section.content.length < 30) continue;
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
-      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
-    }
-  }
-
-  walkDir(pagesDir);
-
-  if (texts.length === 0) {
-    console.log("  ⚠ No FranceConnect doc files found, skipping");
-    return;
-  }
-
-  const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(outDir, "docs.embeddings.bin"));
-
-  const bm25 = await buildBM25Index(texts);
-  saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
-  writeJson(path.join(outDir, "docs.index.json"), chunks);
-
-  console.log(`  ✓ ${chunks.length} FranceConnect doc chunks embedded`);
+  const dir = path.join(DATA_DIR, "docs-franceconnect");
+  await buildMdDocsEmbeddings("FranceConnect", [dir], dir, "No FranceConnect doc files found");
 }
 
 // ─── Job 9: DSFR docs ────────────────────────────────────────────────────────
@@ -563,76 +437,8 @@ async function buildFranceconnectDocsEmbeddings() {
 async function buildDsfrDocsEmbeddings() {
   console.log("\n[9/9] Building DSFR docs embeddings…");
   const baseDir = path.join(DATA_DIR, "docs-dsfr");
-  if (shouldSkip(path.join(baseDir, "docs.embeddings.bin"))) return;
-
-  const subdirs = ["premiers-pas", "fondamentaux"].map((s) =>
-    path.join(baseDir, s),
-  );
-  const existingSubdirs = subdirs.filter((d) => fs.existsSync(d));
-
-  if (existingSubdirs.length === 0) {
-    console.log("  ⚠ docs-dsfr subdirectories not found, skipping");
-    return;
-  }
-
-  const chunks: DocChunk[] = [];
-  const texts: string[] = [];
-
-  function walkDir(dir: string) {
-    for (const entry of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, entry);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.endsWith(".md")) {
-        processDocFile(fullPath);
-      }
-    }
-  }
-
-  function processDocFile(filePath: string) {
-    const relativePath = path.relative(baseDir, filePath);
-    let content: string;
-    try {
-      content = fs.readFileSync(filePath, "utf-8");
-    } catch {
-      return;
-    }
-    const { data: fm } = parseFrontmatter(content);
-    const pageTitle =
-      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
-
-    if (fm["description"]) {
-      const desc = String(fm["description"]);
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
-      texts.push(`[${pageTitle}]\n${desc}`);
-    }
-
-    const sections = extractSections(content);
-    for (const section of sections) {
-      if (section.content.length < 30) continue;
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
-      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
-    }
-  }
-
-  for (const dir of existingSubdirs) {
-    walkDir(dir);
-  }
-
-  if (texts.length === 0) {
-    console.log("  ⚠ No DSFR doc files found, skipping");
-    return;
-  }
-
-  const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(baseDir, "docs.embeddings.bin"));
-
-  const bm25 = await buildBM25Index(texts);
-  saveBM25Index(bm25, path.join(baseDir, "docs.bm25.json"));
-  writeJson(path.join(baseDir, "docs.index.json"), chunks);
-
-  console.log(`  ✓ ${chunks.length} DSFR doc chunks embedded`);
+  const subdirs = ["premiers-pas", "fondamentaux"].map((s) => path.join(baseDir, s));
+  await buildMdDocsEmbeddings("DSFR", subdirs, baseDir, "No DSFR doc files found");
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
