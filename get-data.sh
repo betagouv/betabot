@@ -42,13 +42,16 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=ruche_nu
 
 curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o "$DATA_DIR/calendar.ics"
 
+# welcome to the jungle offers
 npx tsx fetch-wttj.ts
 
 mkdir -p "$DATA_DIR/index"
 
+# active members index
 TODAY=$(date +%Y-%m-%d)
 jq --arg today "$TODAY" '[.[] | select(.missions[]?.end > $today) | {id, fullname, competences, role, domaine}] | unique_by(.id)' "$DATA_DIR/API/members.json" > "$DATA_DIR/index/members.json"
 
+# active startups index
 jq --slurpfile details "$DATA_DIR/API/startups_details.json" '
   [.data[]
    | select(.attributes.phases | map(.name) | any(. == "abandon" or . == "abandon-investigation") | not)
@@ -60,9 +63,10 @@ jq --slurpfile details "$DATA_DIR/API/startups_details.json" '
      }
   ]' "$DATA_DIR/API/startups.json" > "$DATA_DIR/index/startups.json"
 
+# incubators index
 jq '[to_entries[] | {id: .key, title: .value.title, contact: .value.contact, website: .value.website, github: .value.github, startup_count: (.value.startups | length)}]' "$DATA_DIR/API/incubators.json" > "$DATA_DIR/index/incubators.json"
 
-
+# phases index
 cat > "$DATA_DIR/index/phases.txt" << EOF
  - investigation: En investigation (recherche terrain)
  - construction: En construction (lancement du produit)

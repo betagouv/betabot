@@ -31,7 +31,6 @@ function stripHtml(html: string): string {
 async function fetchJobs(org: string): Promise<WttjJob[]> {
   const all: WttjJob[] = [];
   let page = 1;
-  console.log("TOKEN", TOKEN);
   const url = `https://www.welcomekit.co/api/v1/external/jobs?status=published&organization_reference=${encodeURIComponent(org)}&page=${page}&per_page=50`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${TOKEN}` },

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { embedBatch, saveBin } from "./src/embed.js";
 import { buildBM25Index, saveBM25Index } from "./src/search.js";
 import { parseFrontmatter, extractSections } from "./src/markdown.js";
@@ -7,13 +8,31 @@ import { parseFrontmatter, extractSections } from "./src/markdown.js";
 const DATA_DIR = process.env["DATA_DIR"] ?? "./data";
 const FORCE = process.argv.includes("--force");
 
-function shouldSkip(binPath: string): boolean {
-  if (FORCE) return false;
-  if (fs.existsSync(binPath)) {
-    console.log(`  ↩ Already exists, skipping (use --force to rebuild)`);
-    return true;
+function computeTextsHash(texts: string[]): string {
+  return crypto.createHash("sha256").update(texts.join("\0")).digest("hex");
+}
+
+function loadSavedHash(binPath: string): string | null {
+  try {
+    return fs.readFileSync(binPath + ".hash", "utf-8").trim();
+  } catch {
+    return null;
   }
-  return false;
+}
+
+function saveHash(binPath: string, hash: string): void {
+  fs.writeFileSync(binPath + ".hash", hash);
+}
+
+function needsRebuild(binPath: string, texts: string[]): boolean {
+  if (FORCE) return true;
+  if (!fs.existsSync(binPath)) return true;
+  const hash = computeTextsHash(texts);
+  if (loadSavedHash(binPath) === hash) {
+    console.log(`  ↩ Content unchanged, skipping`);
+    return false;
+  }
+  return true;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -125,7 +144,6 @@ function writeJson(filePath: string, data: unknown): void {
 
 async function buildMembersEmbeddings() {
   console.log("\n[1/9] Building members embeddings…");
-  if (shouldSkip(path.join(DATA_DIR, "index/members.embeddings.bin"))) return;
   const members = readJson<MemberEntry[]>(
     path.join(DATA_DIR, "index/members.json"),
   );
@@ -138,8 +156,12 @@ async function buildMembersEmbeddings() {
       }`,
   );
 
+  const binPath = path.join(DATA_DIR, "index/members.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(DATA_DIR, "index/members.embeddings.bin"));
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(DATA_DIR, "index/members.bm25.json"));
@@ -151,15 +173,18 @@ async function buildMembersEmbeddings() {
 
 async function buildStartupsEmbeddings() {
   console.log("\n[2/9] Building startups index embeddings…");
-  if (shouldSkip(path.join(DATA_DIR, "index/startups.embeddings.bin"))) return;
   const startups = readJson<StartupEntry[]>(
     path.join(DATA_DIR, "index/startups.json"),
   );
 
   // todo: remove abandon-* ?
   const texts = startups.map((s) => `${s.name}: ${s.description}`);
+  const binPath = path.join(DATA_DIR, "index/startups.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(DATA_DIR, "index/startups.embeddings.bin"));
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(DATA_DIR, "index/startups.bm25.json"));
@@ -171,7 +196,6 @@ async function buildStartupsEmbeddings() {
 
 async function buildReposEmbeddings() {
   console.log("\n[3/9] Building gitscan repos embeddings…");
-  if (shouldSkip(path.join(DATA_DIR, "gitscan/repos.embeddings.bin"))) return;
   const reposDir = path.join(DATA_DIR, "gitscan/repos");
   const entries: RepoEntry[] = [];
   const texts: string[] = [];
@@ -230,8 +254,12 @@ async function buildReposEmbeddings() {
     }
   }
 
+  const binPath = path.join(DATA_DIR, "gitscan/repos.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(DATA_DIR, "gitscan/repos.embeddings.bin"));
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(DATA_DIR, "gitscan/repos.bm25.json"));
@@ -248,8 +276,6 @@ async function buildMdDocsEmbeddings(
   outDir: string,
   emptyMsg = "No doc files found",
 ): Promise<void> {
-  if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
-
   const chunks: DocChunk[] = [];
   const texts: string[] = [];
 
@@ -310,8 +336,12 @@ async function buildMdDocsEmbeddings(
     return;
   }
 
+  const binPath = path.join(outDir, "docs.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, path.join(outDir, "docs.embeddings.bin"));
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
@@ -333,8 +363,6 @@ async function buildDocsEmbeddings() {
 async function buildVideosEmbeddings() {
   console.log("\n[5/9] Building PeerTube videos embeddings…");
   const peertubeDir = path.join(DATA_DIR, "peertube");
-  const outputBin = path.join(peertubeDir, "videos.embeddings.bin");
-  if (shouldSkip(outputBin)) return;
 
   if (!fs.existsSync(peertubeDir)) {
     console.log("  ⚠ peertube directory not found, skipping");
@@ -378,8 +406,12 @@ async function buildVideosEmbeddings() {
     return;
   }
 
+  const binPath = path.join(peertubeDir, "videos.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, outputBin);
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(peertubeDir, "videos.bm25.json"));
@@ -405,9 +437,6 @@ async function buildProconnectDocsEmbeddings() {
 
 async function buildIncubatorsEmbeddings() {
   console.log("\n[6/9] Building incubators embeddings…");
-  const outputBin = path.join(DATA_DIR, "API/incubators.embeddings.bin");
-  if (shouldSkip(outputBin)) return;
-
   const raw = readJson<Record<string, RawIncubator>>(
     path.join(DATA_DIR, "API/incubators.json"),
   );
@@ -438,8 +467,12 @@ async function buildIncubatorsEmbeddings() {
     texts.push(`${incubator.title} — startups: ${summary}`);
   }
 
+  const binPath = path.join(DATA_DIR, "API/incubators.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
   const vecs = await embedBatch(texts);
-  saveBin(vecs, outputBin);
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
 
   const bm25 = await buildBM25Index(texts);
   saveBM25Index(bm25, path.join(DATA_DIR, "API/incubators.bm25.json"));
