@@ -35,6 +35,10 @@ import {
   tools as proconnectDocTools,
   handlers as proconnectDocHandlers,
 } from "./tools/docs-proconnect.js";
+import {
+  tools as franceconnectDocTools,
+  handlers as franceconnectDocHandlers,
+} from "./tools/docs-franceconnect.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -46,6 +50,7 @@ Tes réponses sont concises et vont à l'essentiel.
 Tu utilises le modèle de language open weight "${process.env.OPENAI_MODEL}" hébergé sur une infrastructure souveraine.
 
 Pour les questions sur ProConnect, OIDC ou OpenID Connect, utilise search_docs_proconnect.
+Pour les questions sur FranceConnect, utilise search_docs_franceconnect.
 
 Pour les questions liées à notre actualité, utilise ces données:
  - calendrier
@@ -63,6 +68,7 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - un organisation GIT, créé un lien vers https://github.com/[ORG]
  - la documentation beta.gouv.fr, crée un lien vers https://doc.incubateur.net/[PATH] sans le suffixe \`.md\` et sans le suffixe \`README\`.
  - la documentation ProConnect, crée un lien vers https://partenaires.proconnect.gouv.fr/docs/[PATH]
+ - la documentation FranceConnect, crée un lien vers https://docs.partenaires.franceconnect.gouv.fr/[PATH]
  - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
 
 Cite tes sources avec leurs URLS en fin de message
@@ -86,6 +92,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...incubatorTools,
   ...sqliteTools,
   ...proconnectDocTools,
+  ...franceconnectDocTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -101,6 +108,7 @@ const ALL_HANDLERS: Record<
   ...incubatorHandlers,
   ...sqliteHandlers,
   ...proconnectDocHandlers,
+  ...franceconnectDocHandlers,
 };
 
 export class Orchestrator {

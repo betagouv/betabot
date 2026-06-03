@@ -372,9 +372,9 @@ async function buildVideosEmbeddings() {
 // ─── Job 7: ProConnect docs ──────────────────────────────────────────────────
 
 async function buildProconnectDocsEmbeddings() {
-  console.log("\n[7/7] Building ProConnect docs embeddings…");
-  const pagesDir = path.join(DATA_DIR, "docs-proconnect", "pages");
-  const outDir = path.join(DATA_DIR, "docs-proconnect");
+  console.log("\n[7/8] Building ProConnect docs embeddings…");
+  const pagesDir = path.join(DATA_DIR, "docs-proconnect");
+  const outDir = pagesDir;
   if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
 
   if (!fs.existsSync(pagesDir)) {
@@ -487,6 +487,77 @@ async function buildIncubatorsEmbeddings() {
   console.log(`  ✓ ${entries.length} incubators embedded`);
 }
 
+// ─── Job 8: FranceConnect docs ───────────────────────────────────────────────
+
+async function buildFranceconnectDocsEmbeddings() {
+  console.log("\n[8/8] Building FranceConnect docs embeddings…");
+  const pagesDir = path.join(DATA_DIR, "docs-franceconnect");
+  const outDir = pagesDir;
+  if (shouldSkip(path.join(outDir, "docs.embeddings.bin"))) return;
+
+  if (!fs.existsSync(pagesDir)) {
+    console.log("  ⚠ docs-franceconnect/pages directory not found, skipping");
+    return;
+  }
+
+  const chunks: DocChunk[] = [];
+  const texts: string[] = [];
+
+  function walkDir(dir: string) {
+    for (const entry of fs.readdirSync(dir)) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walkDir(fullPath);
+      } else if (entry.endsWith(".md")) {
+        processDocFile(fullPath);
+      }
+    }
+  }
+
+  function processDocFile(filePath: string) {
+    const relativePath = path.relative(pagesDir, filePath);
+    let content: string;
+    try {
+      content = fs.readFileSync(filePath, "utf-8");
+    } catch {
+      return;
+    }
+    const { data: fm } = parseFrontmatter(content);
+    const pageTitle =
+      (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
+
+    if (fm["description"]) {
+      const desc = String(fm["description"]);
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
+      texts.push(`[${pageTitle}]\n${desc}`);
+    }
+
+    const sections = extractSections(content);
+    for (const section of sections) {
+      if (section.content.length < 30) continue;
+      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
+      texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
+    }
+  }
+
+  walkDir(pagesDir);
+
+  if (texts.length === 0) {
+    console.log("  ⚠ No FranceConnect doc files found, skipping");
+    return;
+  }
+
+  const vecs = await embedBatch(texts);
+  saveBin(vecs, path.join(outDir, "docs.embeddings.bin"));
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
+  writeJson(path.join(outDir, "docs.index.json"), chunks);
+
+  console.log(`  ✓ ${chunks.length} FranceConnect doc chunks embedded`);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -501,6 +572,7 @@ async function main() {
   await buildVideosEmbeddings();
   await buildIncubatorsEmbeddings();
   await buildProconnectDocsEmbeddings();
+  await buildFranceconnectDocsEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);
