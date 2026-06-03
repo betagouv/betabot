@@ -39,6 +39,8 @@ fs.rmSync(storageDir, { recursive: true, force: true });
 
 const config = new Configuration({
   storageClientOptions: { localDataDirectory: storageDir },
+  // Avoid spawning `ps` (missing in slim containers) for memory probing
+  memoryMbytes: 512,
 });
 
 const crawler = new CheerioCrawler({
