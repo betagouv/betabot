@@ -43,10 +43,7 @@ import {
   tools as dsfrDocTools,
   handlers as dsfrDocHandlers,
 } from "./tools/docs-dsfr.js";
-import {
-  tools as wttjTools,
-  handlers as wttjHandlers,
-} from "./tools/docs-wttj.js";
+import { tools as wttjTools, handlers as wttjHandlers } from "./tools/wttj.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
