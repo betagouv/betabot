@@ -27,12 +27,21 @@ Three-phase pipeline: **fetch** raw data (`get-data.sh`), **embed** into search 
 
 ### Git repos (shallow clone / pull)
 
-| Output                     | Source                                                              |
-| -------------------------- | ------------------------------------------------------------------- |
-| `data/gitscan/`            | `github.com/betagouv/gitscan` — `--depth=1`                         |
-| `data/doc.incubateur.net/` | `github.com/betagouv/doc.incubateur.net-communaute` — `--depth=500` |
-
+| Output                        | Source                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `data/gitscan/`               | `github.com/betagouv/gitscan` — `--depth=1`                              |
+| `data/doc.incubateur.net/`    | `github.com/betagouv/doc.incubateur.net-communaute` — `--depth=500`      |
 On subsequent runs, `git pull` updates each repo in-place.
+
+### Web crawl (fetch-docs.ts)
+
+Generic TypeScript crawler using **crawlee** + **@mozilla/readability** + **turndown**. Run via `npx tsx fetch-docs.ts <start-url> <output-dir>`. Requires no API key. Crawls up to 100 pages per run within the same URL path prefix, extracts article content via Readability, converts to markdown with Turndown.
+
+| Output                              | Source                                                    |
+| ----------------------------------- | --------------------------------------------------------- |
+| `data/docs-proconnect/pages/*.md`   | `https://partenaires.proconnect.gouv.fr/docs` (crawled)  |
+
+To add future web-crawled sources, add another `npx tsx fetch-docs.ts <url> <output-dir>` call to `get-data.sh` and a matching embedding job + tool.
 
 ### PeerTube feeds (curl)
 
@@ -76,7 +85,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Six sequential jobs. Each job:
+Seven sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -198,6 +207,18 @@ Index entry type:
   startups_summary: string;
 }
 ```
+
+### Job 7 — ProConnect docs
+
+Source: all `.md` files under `data/docs-proconnect/pages/` (written by `fetch-docs.ts`).
+
+Per file, same two chunk types as Job 4: front matter intro chunk (from `description`) and section chunks from `extractSections`. Sections with `content.length < 30` are skipped.
+
+Embedding text per chunk: `"[{breadcrumb}]\n{content}"` — `content` truncated to 6000 chars.
+
+Outputs: `data/docs-proconnect/docs.embeddings.bin`, `data/docs-proconnect/docs.bm25.json`, `data/docs-proconnect/docs.index.json`
+
+Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt }`), `path` relative to `data/docs-proconnect/pages/`.
 
 ---
 
