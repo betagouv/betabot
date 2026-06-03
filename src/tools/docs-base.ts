@@ -10,6 +10,7 @@ export interface DocChunk {
   title: string;
   breadcrumb: string;
   excerpt: string;
+  url?: string;
 }
 
 export interface DocToolOpts {

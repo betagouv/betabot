@@ -72,9 +72,9 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - une PR ou issue GIT, créé un lien vers https://github.com/[ORG]/[REPO]/issues/[ID]
  - un organisation GIT, créé un lien vers https://github.com/[ORG]
  - la documentation beta.gouv.fr, crée un lien vers https://doc.incubateur.net/[PATH] sans le suffixe \`.md\` et sans le suffixe \`README\`.
- - la documentation ProConnect, crée un lien vers https://partenaires.proconnect.gouv.fr/docs/[PATH]
- - la documentation FranceConnect, crée un lien vers https://docs.partenaires.franceconnect.gouv.fr/[PATH]
- - la documentation DSFR, crée un lien vers https://www.systeme-de-design.gouv.fr/[PATH]
+ - la documentation ProConnect, utilise le champ \`url\` retourné par l'outil de recherche si disponible, sinon crée un lien vers https://partenaires.proconnect.gouv.fr/docs/[PATH]
+ - la documentation FranceConnect, utilise le champ \`url\` retourné par l'outil de recherche si disponible, sinon crée un lien vers https://docs.partenaires.franceconnect.gouv.fr/[PATH]
+ - la documentation DSFR, utilise le champ \`url\` retourné par l'outil de recherche si disponible, sinon crée un lien vers https://www.systeme-de-design.gouv.fr/[PATH]
  - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
 
 Cite tes sources avec leurs URLS en fin de message

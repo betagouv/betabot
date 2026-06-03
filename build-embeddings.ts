@@ -66,6 +66,7 @@ interface DocChunk {
   title: string;
   breadcrumb: string;
   excerpt: string;
+  url?: string;
 }
 
 interface IncubatorEntry {
@@ -302,6 +303,7 @@ async function buildMdDocsEmbeddings(
     const { data: fm } = parseFrontmatter(content);
     const pageTitle =
       (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
+    const url = fm["url"] as string | undefined;
 
     if (fm["description"]) {
       const desc = String(fm["description"]);
@@ -310,6 +312,7 @@ async function buildMdDocsEmbeddings(
         title: pageTitle,
         breadcrumb: pageTitle,
         excerpt: excerpt(desc),
+        url,
       });
       texts.push(`[${pageTitle}]\n${desc}`);
     }
@@ -322,6 +325,7 @@ async function buildMdDocsEmbeddings(
         title: pageTitle,
         breadcrumb: section.breadcrumb,
         excerpt: excerpt(section.content),
+        url,
       });
       texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
     }

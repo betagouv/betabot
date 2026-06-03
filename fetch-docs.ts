@@ -81,7 +81,7 @@ const crawler = new CheerioCrawler({
 
     fs.writeFileSync(
       path.join(outputDir, `${slug}.md`),
-      `# ${articleTitle}\n\n${markdown}`,
+      `---\nurl: ${request.url}\n---\n# ${articleTitle}\n\n${markdown}`,
     );
     console.log(`  ✓ ${slug}.md`);
   },
