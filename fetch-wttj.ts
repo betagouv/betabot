@@ -51,11 +51,14 @@ function jobToMarkdown(job: WttjJob, org: string): string {
   const city = job.office?.city ?? "";
   const country = job.office?.country_code ?? "";
   const location = [city, country].filter(Boolean).join(", ");
+  const orgSlug = orgs.find((o) => o.id === org)?.slug;
+  const jobUrl = `https://www.welcometothejungle.com/fr/companies/${orgSlug}/`;
 
   const lines: string[] = [
     "---",
     `title: ${JSON.stringify(job.name)}`,
     `organization: ${JSON.stringify(org)}`,
+    `url: ${JSON.stringify(jobUrl)}`,
   ];
   if (location) lines.push(`location: ${JSON.stringify(location)}`);
   if (job.contract_type)
@@ -64,14 +67,10 @@ function jobToMarkdown(job: WttjJob, org: string): string {
   if (job.apply_url) lines.push(`apply_url: ${JSON.stringify(job.apply_url)}`);
   if (job.published_at)
     lines.push(`published_at: ${JSON.stringify(job.published_at)}`);
-  const orgSlug = orgs.find((o) => o.id === org)?.slug;
-  lines.push(
-    `url: https://www.welcometothejungle.com/fr/companies/${orgSlug}/`,
-  );
-
   lines.push("---", "");
 
   const parts: string[] = [];
+  parts.push(jobUrl);
   if (job.description) parts.push(stripHtml(job.description));
   if (job.profile) parts.push(stripHtml(job.profile));
   if (parts.length) lines.push(parts.join("\n\n"));
