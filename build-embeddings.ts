@@ -107,7 +107,10 @@ function excerpt(text: string, maxLen = 200): string {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function readJson<T>(filePath: string): T {
@@ -124,14 +127,15 @@ async function buildMembersEmbeddings() {
   console.log("\n[1/9] Building members embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/members.embeddings.bin"))) return;
   const members = readJson<MemberEntry[]>(
-    path.join(DATA_DIR, "index/members.json")
+    path.join(DATA_DIR, "index/members.json"),
   );
 
+  // todo: remove expired ?
   const texts = members.map(
     (m) =>
       `${m.fullname}, ${m.role}, domaine ${m.domaine}. Compétences: ${
         (m.competences ?? []).join(", ") || "non renseignées"
-      }`
+      }`,
   );
 
   const vecs = await embedBatch(texts);
@@ -149,9 +153,10 @@ async function buildStartupsEmbeddings() {
   console.log("\n[2/9] Building startups index embeddings…");
   if (shouldSkip(path.join(DATA_DIR, "index/startups.embeddings.bin"))) return;
   const startups = readJson<StartupEntry[]>(
-    path.join(DATA_DIR, "index/startups.json")
+    path.join(DATA_DIR, "index/startups.json"),
   );
 
+  // todo: remove abandon-* ?
   const texts = startups.map((s) => `${s.name}: ${s.description}`);
   const vecs = await embedBatch(texts);
   saveBin(vecs, path.join(DATA_DIR, "index/startups.embeddings.bin"));
@@ -274,14 +279,24 @@ async function buildMdDocsEmbeddings(
 
     if (fm["description"]) {
       const desc = String(fm["description"]);
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: pageTitle, excerpt: excerpt(desc) });
+      chunks.push({
+        path: relativePath,
+        title: pageTitle,
+        breadcrumb: pageTitle,
+        excerpt: excerpt(desc),
+      });
       texts.push(`[${pageTitle}]\n${desc}`);
     }
 
     const sections = extractSections(content);
     for (const section of sections) {
       if (section.content.length < 30) continue;
-      chunks.push({ path: relativePath, title: pageTitle, breadcrumb: section.breadcrumb, excerpt: excerpt(section.content) });
+      chunks.push({
+        path: relativePath,
+        title: pageTitle,
+        breadcrumb: section.breadcrumb,
+        excerpt: excerpt(section.content),
+      });
       texts.push(`[${section.breadcrumb}]\n${excerpt(section.content, 6000)}`);
     }
   }
@@ -350,7 +365,11 @@ async function buildVideosEmbeddings() {
         ? stripHtml(item.content_html)
         : (item.summary ?? "");
       chunks.push({ title, channel: channelName, url, date, description });
-      texts.push(description ? `[${channelName}] ${title}\n${description}` : `[${channelName}] ${title}`);
+      texts.push(
+        description
+          ? `[${channelName}] ${title}\n${description}`
+          : `[${channelName}] ${title}`,
+      );
     }
   }
 
@@ -374,7 +393,12 @@ async function buildVideosEmbeddings() {
 async function buildProconnectDocsEmbeddings() {
   console.log("\n[7/9] Building ProConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-proconnect");
-  await buildMdDocsEmbeddings("ProConnect", [dir], dir, "No ProConnect doc files found");
+  await buildMdDocsEmbeddings(
+    "ProConnect",
+    [dir],
+    dir,
+    "No ProConnect doc files found",
+  );
 }
 
 // ─── Job 6: Incubators ───────────────────────────────────────────────────────
@@ -385,7 +409,7 @@ async function buildIncubatorsEmbeddings() {
   if (shouldSkip(outputBin)) return;
 
   const raw = readJson<Record<string, RawIncubator>>(
-    path.join(DATA_DIR, "API/incubators.json")
+    path.join(DATA_DIR, "API/incubators.json"),
   );
 
   const entries: IncubatorEntry[] = [];
@@ -429,7 +453,12 @@ async function buildIncubatorsEmbeddings() {
 async function buildFranceconnectDocsEmbeddings() {
   console.log("\n[8/9] Building FranceConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-franceconnect");
-  await buildMdDocsEmbeddings("FranceConnect", [dir], dir, "No FranceConnect doc files found");
+  await buildMdDocsEmbeddings(
+    "FranceConnect",
+    [dir],
+    dir,
+    "No FranceConnect doc files found",
+  );
 }
 
 // ─── Job 9: DSFR docs ────────────────────────────────────────────────────────
@@ -437,8 +466,37 @@ async function buildFranceconnectDocsEmbeddings() {
 async function buildDsfrDocsEmbeddings() {
   console.log("\n[9/9] Building DSFR docs embeddings…");
   const baseDir = path.join(DATA_DIR, "docs-dsfr");
-  const subdirs = ["premiers-pas", "fondamentaux"].map((s) => path.join(baseDir, s));
-  await buildMdDocsEmbeddings("DSFR", subdirs, baseDir, "No DSFR doc files found");
+  const subdirs = ["premiers-pas", "fondamentaux"].map((s) =>
+    path.join(baseDir, s),
+  );
+  await buildMdDocsEmbeddings(
+    "DSFR",
+    subdirs,
+    baseDir,
+    "No DSFR doc files found",
+  );
+}
+
+// ─── Job 10: WTTJ job offers ─────────────────────────────────────────────────
+
+async function buildWttjEmbeddings() {
+  console.log("\n[10/10] Building WTTJ job offers embeddings…");
+  const baseDir = path.join(DATA_DIR, "wttj");
+  if (!fs.existsSync(baseDir)) {
+    console.log("  ⚠ wttj directory not found, skipping");
+    return;
+  }
+  const orgDirs = fs
+    .readdirSync(baseDir)
+    .map((f) => path.join(baseDir, f))
+    .filter((f) => {
+      try {
+        return fs.statSync(f).isDirectory();
+      } catch {
+        return false;
+      }
+    });
+  await buildMdDocsEmbeddings("WTTJ", orgDirs, baseDir, "No WTTJ job offers found");
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -457,6 +515,7 @@ async function main() {
   await buildProconnectDocsEmbeddings();
   await buildFranceconnectDocsEmbeddings();
   await buildDsfrDocsEmbeddings();
+  await buildWttjEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);

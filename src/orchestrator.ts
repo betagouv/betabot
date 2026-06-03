@@ -43,6 +43,10 @@ import {
   tools as dsfrDocTools,
   handlers as dsfrDocHandlers,
 } from "./tools/docs-dsfr.js";
+import {
+  tools as wttjTools,
+  handlers as wttjHandlers,
+} from "./tools/docs-wttj.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -79,8 +83,8 @@ Cite tes sources avec leurs URLS en fin de message
  - [site beta.gouv.fr](https://beta.gouv.fr)
  - [standards des produits beta.gouv.fr](https://standards.beta.gouv.fr)
  - ton code source est dispo sur github.com/betagouv/betabot
- - expliquer la requete SQL utilisée s'il y en a
- - ne mentionne pas les tools utilisés ou leur parametres
+ - ne mentionne pas les tools internes utilisés
+ - présente et explique ls requetes SQL utilisées
 `;
 
 const MAX_HISTORY = 20;
@@ -98,6 +102,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...proconnectDocTools,
   ...franceconnectDocTools,
   ...dsfrDocTools,
+  ...wttjTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -115,6 +120,7 @@ const ALL_HANDLERS: Record<
   ...proconnectDocHandlers,
   ...franceconnectDocHandlers,
   ...dsfrDocHandlers,
+  ...wttjHandlers,
 };
 
 export class Orchestrator {

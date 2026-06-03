@@ -31,7 +31,7 @@ RUN node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 COPY src ./src
-COPY get-data.sh build-embeddings.ts build-db.ts fetch-docs.ts ./
+COPY get-data.sh build-embeddings.ts build-db.ts fetch-docs.ts fetch-wttj.ts ./
 
 # Create /data owned by the node user before dropping privileges
 RUN mkdir -p /data && chown node:node /data

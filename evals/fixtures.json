@@ -306,5 +306,60 @@
     "id": "aggregate-incubator-phases",
     "question": "quelles sont les phases des startups de l'incubateur écologie ?",
     "expect_tools": ["query_data"]
+  },
+  {
+    "id": "proconnect-bouton-integration",
+    "question": "comment intégrer le bouton ProConnect sur mon service ?",
+    "expect_tools": ["search_docs_proconnect"]
+  },
+  {
+    "id": "proconnect-couverture",
+    "question": "quelle est la couverture de ProConnect, quels sont les fournisseurs d'identité supportés ?",
+    "expect_tools": ["search_docs_proconnect"]
+  },
+  {
+    "id": "proconnect-oidc",
+    "question": "comment fonctionne l'authentification OIDC avec ProConnect ?",
+    "expect_tools": ["search_docs_proconnect"]
+  },
+  {
+    "id": "franceconnect-integration-fs",
+    "question": "comment devenir fournisseur de service FranceConnect ?",
+    "expect_tools": ["search_docs_franceconnect"]
+  },
+  {
+    "id": "franceconnect-niveaux-eidas",
+    "question": "quels sont les niveaux eIDAS supportés par FranceConnect ?",
+    "expect_tools": ["search_docs_franceconnect"]
+  },
+  {
+    "id": "franceconnect-deconnexion",
+    "question": "comment implémenter la déconnexion avec FranceConnect+ ?",
+    "expect_tools": ["search_docs_franceconnect"]
+  },
+  {
+    "id": "dsfr-installation",
+    "question": "comment installer le Design Système de l'État (DSFR) dans mon projet ?",
+    "expect_tools": ["search_docs_dsfr"]
+  },
+  {
+    "id": "dsfr-couleurs",
+    "question": "quelles sont les couleurs disponibles dans le DSFR ?",
+    "expect_tools": ["search_docs_dsfr"]
+  },
+  {
+    "id": "dsfr-accessibilite",
+    "question": "comment rendre mon service accessible avec le DSFR ?",
+    "expect_tools": ["search_docs_dsfr"]
+  },
+  {
+    "id": "wttj-job-search",
+    "question": "quelles offres d'emploi sont disponibles sur WelcomeKit ?",
+    "expect_tools": ["search_wttj_jobs"]
+  },
+  {
+    "id": "wttj-job-dev",
+    "question": "y a-t-il des postes de développeur en télétravail ?",
+    "expect_tools": ["search_wttj_jobs"]
   }
 ]

@@ -1,6 +1,6 @@
 # betabot
 
-Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, and web-crawled documentation for ProConnect, FranceConnect, and the Design Système de l'État (DSFR).
+Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, and the Design Système de l'État (DSFR), and job offers from WelcomeKit (WTTJ).
 
 Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls.
 
@@ -20,6 +20,8 @@ Detailed specs : [./specs](./specs)
 - _Comment intégrer ProConnect avec OIDC ?_
 - _Quelle est la différence entre FranceConnect et AgentConnect ?_
 - _Comment utiliser les boutons du DSFR ?_
+- _Quelles offres d'emploi sont disponibles sur WelcomeKit ?_
+- _Y a-t-il des postes de développeur en télétravail ?_
 
 ---
 
@@ -47,6 +49,7 @@ Tool dispatcher
   ├── search_docs_proconnect / get_doc_proconnect_page
   ├── search_docs_franceconnect / get_doc_franceconnect_page
   ├── search_docs_dsfr / get_doc_dsfr_page
+  ├── search_wttj_jobs / get_wttj_job_page
   ├── get_calendar
   ├── search_videos
   └── get_videos
@@ -106,7 +109,7 @@ MATRIX_ACCESS_TOKEN=syt_...       # or use MATRIX_PASSWORD instead
 ./get-data.sh
 ```
 
-This downloads the API snapshots, calendar, and PeerTube feeds into `data/`, and crawls web-based documentation sources into `data/docs-*`.
+This downloads the API snapshots, calendar, and PeerTube feeds into `data/`, crawls web-based documentation sources into `data/docs-*`, and fetches WelcomeKit job offers into `data/wttj/`.
 
 Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee](https://crawlee.dev) with [Readability](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown):
 
@@ -117,6 +120,12 @@ Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee]
 | FranceConnect | `https://docs.partenaires.franceconnect.gouv.fr` | `data/docs-franceconnect/` |
 | DSFR (premiers pas) | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
 | DSFR (fondamentaux) | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
+
+WelcomeKit job offers use `fetch-wttj.ts` — fetches published jobs from the WelcomeKit API and writes one markdown file per offer. Requires `WELCOMEKIT_TOKEN` to be set. Orgs are hardcoded in the script; to add one extend the `orgs` array in `fetch-wttj.ts`.
+
+| Source | API | Output |
+|--------|-----|--------|
+| WelcomeKit jobs | `www.welcomekit.co/api/v1/external/jobs` | `data/wttj/{org}/` |
 
 To crawl a new documentation site manually:
 
@@ -130,7 +139,7 @@ npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
 npm run embed
 ```
 
-Embeds chunks across 9 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
+Embeds chunks across 10 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
 
 ```sh
 npm run embed -- --force

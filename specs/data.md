@@ -43,6 +43,26 @@ Generic TypeScript crawler using **crawlee** + **@mozilla/readability** + **turn
 
 To add future web-crawled sources, add another `npx tsx fetch-docs.ts <url> <output-dir>` call to `get-data.sh` and a matching embedding job + tool.
 
+### WelcomeKit job offers (fetch-wttj.ts)
+
+TypeScript script that fetches published job offers from the WelcomeKit API. Requires one env var:
+
+| Env var            | Description                        |
+| ------------------ | ---------------------------------- |
+| `WELCOMEKIT_TOKEN` | API bearer token (`Bearer` scheme) |
+
+Orgs are hardcoded in the script as `{ id, slug }` pairs (e.g. `{ id: "ci7AvS", slug: "communaute-beta-gouv" }`). To add an org, extend the `orgs` array.
+
+For each org, calls `GET /api/v1/external/jobs?status=published&organization_reference={id}&per_page=50` and writes one markdown file per offer:
+
+```
+data/wttj/{org.id}/{job.reference}.md
+```
+
+Each file has YAML frontmatter (`title`, `organization`, `location`, `contract`, `remote`, `apply_url`, `published_at`, `url`) and a plain-text body (HTML stripped from `description` + `profile` fields). The `url` field points to the company page on welcometothejungle.com using the org slug.
+
+Existing `.md` files in each org directory are removed before rewriting so deleted offers are pruned.
+
 ### PeerTube feeds (curl)
 
 All channels from `tube.numerique.gouv.fr`, sorted by `-createdAt`:
@@ -85,7 +105,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Seven sequential jobs. Each job:
+Ten sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -219,6 +239,20 @@ Embedding text per chunk: `"[{breadcrumb}]\n{content}"` — `content` truncated 
 Outputs: `data/docs-proconnect/docs.embeddings.bin`, `data/docs-proconnect/docs.bm25.json`, `data/docs-proconnect/docs.index.json`
 
 Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt }`), `path` relative to `data/docs-proconnect/pages/`.
+
+### Job 10 — WTTJ job offers
+
+Source: all `.md` files under `data/wttj/{org}/` for each org directory found.
+
+Per file, same two chunk types as Job 4: front matter intro chunk (from `description` if present) and section chunks from `extractSections`.
+
+Embedding text per chunk: `"[{breadcrumb}]\n{content}"` — `content` truncated to 6000 chars.
+
+Skipped entirely if `data/wttj/` directory does not exist.
+
+Outputs: `data/wttj/docs.embeddings.bin`, `data/wttj/docs.bm25.json`, `data/wttj/docs.index.json`
+
+Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt }` with `path` relative to `data/wttj/` (e.g., `ci7AvS/senior-backend-engineer-abc123.md`).
 
 ---
 

@@ -7,6 +7,9 @@ import { tools as memberTools } from "../src/tools/members.js";
 import { tools as startupTools } from "../src/tools/startups.js";
 import { tools as repoTools } from "../src/tools/repos.js";
 import { tools as docTools } from "../src/tools/docs.js";
+import { tools as proconnectDocTools } from "../src/tools/docs-proconnect.js";
+import { tools as franceconnectDocTools } from "../src/tools/docs-franceconnect.js";
+import { tools as dsfrDocTools } from "../src/tools/docs-dsfr.js";
 import { tools as pageTools } from "../src/tools/pages.js";
 import { tools as calendarTools } from "../src/tools/calendar.js";
 import { tools as videoTools } from "../src/tools/videos.js";
@@ -20,6 +23,9 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...startupTools,
   ...repoTools,
   ...docTools,
+  ...proconnectDocTools,
+  ...franceconnectDocTools,
+  ...dsfrDocTools,
   ...pageTools,
   ...calendarTools,
   ...videoTools,
@@ -43,6 +49,18 @@ const CANNED: Record<string, unknown> = {
   search_docs: [
     { path: "test/doc.md", title: "Documentation test", breadcrumb: "Test", excerpt: "Contenu de test.", score: 0.9 },
   ],
+  search_docs_proconnect: [
+    { path: "docs-fournisseur-service-bouton-proconnect.md", title: "Bouton ProConnect", breadcrumb: "Fournisseur de service", excerpt: "Intégration du bouton ProConnect.", score: 0.9 },
+  ],
+  search_docs_franceconnect: [
+    { path: "fs-fs-integration-integration-bouton-fc.md", title: "Bouton FranceConnect", breadcrumb: "Fournisseur de service > Intégration", excerpt: "Intégration du bouton FranceConnect.", score: 0.9 },
+  ],
+  search_docs_dsfr: [
+    { path: "premiers-pas/installation.md", title: "Installation du DSFR", breadcrumb: "Premiers pas", excerpt: "Comment installer le Design Système de l'État.", score: 0.9 },
+  ],
+  get_doc_proconnect_page: "Contenu de la page de documentation ProConnect.",
+  get_doc_franceconnect_page: "Contenu de la page de documentation FranceConnect.",
+  get_doc_dsfr_page: "Contenu de la page de documentation DSFR.",
   search_pages: [
     { path: "manifeste.md", title: "Manifeste beta.gouv.fr", breadcrumb: "Manifeste > Introduction", excerpt: "Nouvelle manière de concevoir l'action publique.", score: 0.9 },
   ],
