@@ -113,18 +113,18 @@ This downloads the API snapshots, calendar, and PeerTube feeds into `data/`, cra
 
 Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee](https://crawlee.dev) with [Readability](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown):
 
-| Source | URL | Output |
-|--------|-----|--------|
-| beta.gouv.fr community docs | pre-fetched via GitBook export | `data/doc.incubateur.net/` |
-| ProConnect | `https://partenaires.proconnect.gouv.fr/docs` | `data/docs-proconnect/` |
-| FranceConnect | `https://docs.partenaires.franceconnect.gouv.fr` | `data/docs-franceconnect/` |
-| DSFR (premiers pas) | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
-| DSFR (fondamentaux) | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
+| Source                      | URL                                                    | Output                         |
+| --------------------------- | ------------------------------------------------------ | ------------------------------ |
+| beta.gouv.fr community docs | pre-fetched via GitBook export                         | `data/doc.incubateur.net/`     |
+| ProConnect                  | `https://partenaires.proconnect.gouv.fr/docs`          | `data/docs-proconnect/`        |
+| FranceConnect               | `https://docs.partenaires.franceconnect.gouv.fr`       | `data/docs-franceconnect/`     |
+| DSFR (premiers pas)         | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
+| DSFR (fondamentaux)         | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
 
 WelcomeKit job offers use `fetch-wttj.ts` — fetches published jobs from the WelcomeKit API and writes one markdown file per offer. Requires `WELCOMEKIT_TOKEN` to be set. Orgs are hardcoded in the script; to add one extend the `orgs` array in `fetch-wttj.ts`.
 
-| Source | API | Output |
-|--------|-----|--------|
+| Source          | API                                      | Output             |
+| --------------- | ---------------------------------------- | ------------------ |
 | WelcomeKit jobs | `www.welcomekit.co/api/v1/external/jobs` | `data/wttj/{org}/` |
 
 To crawl a new documentation site manually:
@@ -233,3 +233,8 @@ tool definitions, the orchestrator, or the fixture set. It posts a sticky commen
 npm run build   # outputs to dist/
 npm run start
 ```
+
+## Todo
+
+- data: formations
+-
