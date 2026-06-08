@@ -22,7 +22,9 @@ fi
 # dont embed internal instructions or noise
 rm -r $DATA_DIR/doc.incubateur.net/les-standards/.adrs || true
 rm -r $DATA_DIR/doc.incubateur.net/les-standards/*.md || true
+rm -r $DATA_DIR/doc.incubateur.net/gerer-son-produit/standards || true
 rm -r $DATA_DIR/doc.incubateur.net/gerer-son-produit/les-standards || true
+rm -r $DATA_DIR/doc.incubateur.net/gerer-son-produit/readme-doc-incubateur-net || true
 
 npx tsx fetch-docs.ts https://partenaires.proconnect.gouv.fr/docs "$DATA_DIR/docs-proconnect"
 npx tsx fetch-docs.ts https://docs.partenaires.franceconnect.gouv.fr "$DATA_DIR/docs-franceconnect"

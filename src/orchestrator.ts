@@ -62,11 +62,10 @@ Tu utilises le modèle de language open weight "${process.env.OPENAI_MODEL}" hé
 
 Pour les questions liées à notre actualité, utilise ces données:
  - calendrier
- - les mises à jour sur la documentation
  - les dernieres vidéos peertube
  - le changelog de betagouv/doc.incubateur.net-communaute
  - le changelog de betagouv/beta.gouv.fr
- - les dernieres membres et startups (sqlite)
+ - les derniers membres et startups (sqlite)
  - les changelogs gitscan des organisations si mentionnées
  - les dernieres offres d'emploi
 

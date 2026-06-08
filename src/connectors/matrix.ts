@@ -192,8 +192,8 @@ Je peux t'aider à :
 - 👤 **Trouver un membre** de la communauté
 - 🚀 **Chercher une startup** ou un produit
 - 📁 **Explorer les dépôts** de code de la communauté
-- 📖 **Consulter la documentation** beta.gouv.fr
-- 📖 **Consulter les documentations** de ProConnect, FranceConnect ou du design système de l'état
+- 📖 **Consulter la documentation et les standards** beta.gouv.fr
+- 📖 **Consulter les documentations** de ProConnect, FranceConnect ou du design système de l'état (DSFR)
 - 📅 **Vérifier l'agenda** de la communauté
 - 🎥 **Retrouver des vidéos** et ressources
 - 🏢 **Découvrir les incubateurs**
