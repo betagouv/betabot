@@ -44,6 +44,10 @@ import {
   handlers as dsfrDocHandlers,
 } from "./tools/docs-dsfr.js";
 import { tools as wttjTools, handlers as wttjHandlers } from "./tools/wttj.js";
+import {
+  tools as changelogStartupsTools,
+  handlers as changelogStartupsHandlers,
+} from "./tools/changelog-startups.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -104,6 +108,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...franceconnectDocTools,
   ...dsfrDocTools,
   ...wttjTools,
+  ...changelogStartupsTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -122,6 +127,7 @@ const ALL_HANDLERS: Record<
   ...franceconnectDocHandlers,
   ...dsfrDocHandlers,
   ...wttjHandlers,
+  ...changelogStartupsHandlers,
 };
 
 export class Orchestrator {

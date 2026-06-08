@@ -50,6 +50,7 @@ Tool dispatcher
   ├── search_docs_franceconnect / get_doc_franceconnect_page
   ├── search_docs_dsfr / get_doc_dsfr_page
   ├── search_wttj_jobs / get_wttj_job_page
+  ├── get_startup_updates
   ├── get_calendar
   ├── search_videos
   └── get_videos
@@ -120,6 +121,12 @@ Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee]
 | FranceConnect               | `https://docs.partenaires.franceconnect.gouv.fr`       | `data/docs-franceconnect/`     |
 | DSFR (premiers pas)         | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
 | DSFR (fondamentaux)         | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
+
+The startup changelog is fetched from the GitHub Pages-rendered diff page and parsed by `src/parse-startup-changelog.ts` into `data/changelog-startups.json` — a map of startup slug → raw git diff. This powers the `get_startup_updates` tool.
+
+| Source                  | URL                                                              | Output                         |
+| ----------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| Startup changelog diffs | `https://betagouv.github.io/beta.gouv.fr/startups.html`         | `data/changelog-startups.json` |
 
 WelcomeKit job offers use `fetch-wttj.ts` — fetches published jobs from the WelcomeKit API and writes one markdown file per offer. Requires `WELCOMEKIT_TOKEN` to be set. Orgs are hardcoded in the script; to add one extend the `orgs` array in `fetch-wttj.ts`.
 

@@ -56,7 +56,7 @@ const queryDataTool: ChatCompletionTool = {
     name: "query_data",
     description: `Exécute une requête SQL SELECT sur la base de données locale pour répondre aux questions statistiques ou d'agrégation : compter, classer, grouper des membres, startups, incubateurs, compétences, phases, thématiques, technologies.
 Préférer cet outil aux outils de recherche sémantique pour les questions du type "combien de…", "quelle startup a le plus…", "quelles compétences sont les plus représentées", "liste des startups en phase X", "startups de l'incubateur Y".
-Retourne au maximum 200 lignes.
+Utilise des opérateurs insensibles à la casse et retourne au maximum 200 lignes.
 ${SCHEMA}`,
     parameters: {
       type: "object",

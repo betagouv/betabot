@@ -19,9 +19,10 @@ if [ -d "$DATA_DIR/doc.incubateur.net" ]; then
 else
   git clone https://github.com/betagouv/doc.incubateur.net-communaute --depth=500 "$DATA_DIR/doc.incubateur.net"
 fi
-# dont embed internal instructions
-rm -r "$DATA_DIR/doc.incubateur.net/les-standards/.adrs" || true
-rm -r "$DATA_DIR/doc.incubateur.net/les-standards/*.md" || true
+# dont embed internal instructions or noise
+rm -r $DATA_DIR/doc.incubateur.net/les-standards/.adrs || true
+rm -r $DATA_DIR/doc.incubateur.net/les-standards/*.md || true
+rm -r $DATA_DIR/doc.incubateur.net/gerer-son-produit/les-standards || true
 
 npx tsx fetch-docs.ts https://partenaires.proconnect.gouv.fr/docs "$DATA_DIR/docs-proconnect"
 npx tsx fetch-docs.ts https://docs.partenaires.franceconnect.gouv.fr "$DATA_DIR/docs-franceconnect"
@@ -41,6 +42,10 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.m
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=ruche_numerique&sort=-createdAt" -o "$DATA_DIR/peertube/ruche_numerique.json"
 
 curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o "$DATA_DIR/calendar.ics"
+
+# startup changelog
+curl -L "https://betagouv.github.io/beta.gouv.fr/startups.html" -o "$DATA_DIR/startups-changelog.html"
+npx tsx src/parse-startup-changelog.ts "$DATA_DIR/startups-changelog.html" "$DATA_DIR/changelog-startups.json"
 
 # welcome to the jungle offers
 npx tsx fetch-wttj.ts
