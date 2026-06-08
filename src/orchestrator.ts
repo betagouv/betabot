@@ -48,6 +48,7 @@ import {
   tools as changelogStartupsTools,
   handlers as changelogStartupsHandlers,
 } from "./tools/changelog-startups.js";
+import { detectEntities, type DetectedEntities } from "./entity-detector.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
 Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
@@ -91,6 +92,28 @@ Cite tes sources avec leurs URLS en fin de message
  - ne mentionne pas les tools internes utilisés
  - présente et explique ls requetes SQL utilisées
 `;
+
+function buildSystemPrompt(entities: DetectedEntities): string {
+  const lines: string[] = [];
+  if (entities.members.length) {
+    lines.push("Membres détectés dans la question :");
+    entities.members.forEach((e) =>
+      lines.push(`  - ${e.label} : slug="${e.id}", url=${e.url}`),
+    );
+  }
+  if (entities.startups.length) {
+    lines.push("Startups détectées dans la question :");
+    entities.startups.forEach((e) =>
+      lines.push(`  - ${e.label} : slug="${e.id}", url=${e.url}`),
+    );
+  }
+  if (!lines.length) return SYSTEM_PROMPT;
+  return (
+    SYSTEM_PROMPT +
+    "\n\nEntités identifiées dans cette question (utilise ces slugs et URLs) :\n" +
+    lines.join("\n")
+  );
+}
 
 const MAX_HISTORY = 20;
 const MAX_TOOL_ITERATIONS = 10;
@@ -175,16 +198,25 @@ export class Orchestrator {
     history.push({ role: "user", content: input.text });
     this.trimHistory(history);
 
-    const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...history,
-    ];
-
     const debug = (...args: unknown[]) =>
       process.stderr.write(`[debug] ${args.join(" ")}\n`);
 
     debug(`handle key=${key} text=${JSON.stringify(input.text)}`);
     debug(`history length=${history.length}`);
+
+    const detectedEntities = detectEntities(input.text);
+    const memberCount = detectedEntities.members.length;
+    const startupCount = detectedEntities.startups.length;
+    if (memberCount || startupCount) {
+      debug(
+        `entity pre-pass: ${memberCount} member(s) [${detectedEntities.members.map((e) => e.id).join(", ")}], ` +
+          `${startupCount} startup(s) [${detectedEntities.startups.map((e) => e.id).join(", ")}]`,
+      );
+    }
+    const messages: ChatCompletionMessageParam[] = [
+      { role: "system", content: buildSystemPrompt(detectedEntities) },
+      ...history,
+    ];
 
     let iterations = 0;
 

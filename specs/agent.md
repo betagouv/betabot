@@ -24,8 +24,9 @@ Conversation key: `"${roomId}:${threadId ?? 'root'}"` — distinct per Matrix th
 
 ## Loop
 
+0. **Entity pre-pass:** Run `detectEntities(text)` (`src/entity-detector.ts`) — synchronous, no LLM or embedding call. Uses runtime token-lookup maps built from member fullnames/IDs and startup names/slugs. Score = count of entity name tokens found in the query; threshold ≥ 1 matching token, top 3 per type, ranked by coverage ratio. Debug output to stderr via `[entity-detector]` prefix. Returns `{members:[], startups:[]}` silently on any error.
 1. Append user message to history.
-2. Build `messages = [system, ...history]`.
+2. Build `messages = [system (+ optional entity context), ...history]`.
 3. Call `chat.completions.create` with all tools, `tool_choice: "auto"`.
 4. If `finish_reason === "stop"` or no tool calls → return assistant content.
 5. If tool calls → dispatch all in parallel (`Promise.all`), append results, repeat.

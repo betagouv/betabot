@@ -140,6 +140,7 @@ export {
   buildBM25Index,
   saveBM25Index,
   loadBM25Index,
+  prepareText,
   sparseSearch,
   cosineSimilarity,
   denseSearch,
