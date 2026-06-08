@@ -1,0 +1,20 @@
+[
+  {
+    "id": "lasuite",
+    "name": "La Suite Numérique",
+    "description": "Suite d'outils collaboratifs pour les agents de l'État",
+    "active_member_count": 5
+  },
+  {
+    "id": "aidants-connect",
+    "name": "Aidants Connect",
+    "description": "Aide les aidants numériques à accompagner les usagers",
+    "active_member_count": 3
+  },
+  {
+    "id": "mon-suivi-social",
+    "name": "Mon Suivi Social",
+    "description": "Suivi social pour les usagers en situation de précarité",
+    "active_member_count": 2
+  }
+]

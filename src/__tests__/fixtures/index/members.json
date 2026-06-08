@@ -1,0 +1,23 @@
+[
+  {
+    "id": "julien.marteau",
+    "fullname": "Julien Marteau",
+    "role": "Développeur",
+    "domaine": "Développement",
+    "competences": ["TypeScript"]
+  },
+  {
+    "id": "pierre.dupont",
+    "fullname": "Pierre Dupont",
+    "role": "Coach",
+    "domaine": "Coaching",
+    "competences": []
+  },
+  {
+    "id": "anne-laure.martin",
+    "fullname": "Anne-Laure Martin",
+    "role": "Designer",
+    "domaine": "Design",
+    "competences": []
+  }
+]

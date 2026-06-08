@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tsconfig.json"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tsconfig.json"
+      - "package.json"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check & compile
+        run: npx tsc
+
+      - name: Run unit tests
+        run: node --test 'dist/src/__tests__/**/*.test.js'

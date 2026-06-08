@@ -16,7 +16,8 @@
     "eval:generate": "node --env-file=.env --import tsx evals/generate.ts",
     "eval:report": "node --import tsx evals/report.ts",
     "get-data": "sh get-data.sh",
-    "get-device-id": "node --env-file=.env --import tsx src/get-device-id.ts"
+    "get-device-id": "node --env-file=.env --import tsx src/get-device-id.ts",
+    "test": "tsc && node --test 'dist/src/__tests__/**/*.test.js'"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

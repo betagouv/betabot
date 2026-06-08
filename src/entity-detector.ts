@@ -3,7 +3,7 @@ import path from "path";
 import { config } from "./config.js";
 import { prepareText } from "./search.js";
 
-const DATA = config.dataDir;
+let DATA = config.dataDir;
 
 interface MemberIndexEntry {
   id: string;
@@ -131,6 +131,20 @@ function matchByTokens<T extends { id: string }>(
       const entry = entryById.get(id)!;
       return { id, label: getLabel(entry), url: getUrl(entry) };
     });
+}
+
+/** Clears lazy-loaded caches — used in tests to reload with different fixture data. */
+export function _reset(): void {
+  memberTokens = null;
+  memberInverse = null;
+  startupTokens = null;
+  startupInverse = null;
+}
+
+/** Overrides the data directory and clears caches — test use only. */
+export function _setDataDir(dir: string): void {
+  DATA = dir;
+  _reset();
 }
 
 const debug = (...args: unknown[]) =>
