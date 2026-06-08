@@ -182,6 +182,46 @@ async function get_startup_members(
     .filter((m): m is NonNullable<typeof m> => m !== null);
 }
 
+interface StandardsEvaluationSummary {
+  startup_id: string;
+  score?: number;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+async function get_startup_standards_evaluation(
+  startup_id: string,
+): Promise<string> {
+  const url = `https://standards.beta.gouv.fr/api/evaluation/summary?startup_id=${encodeURIComponent(startup_id)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    if (res.status === 404) return `Aucune évaluation standards trouvée pour la startup "${startup_id}".`;
+    throw new Error(`standards.beta.gouv.fr: HTTP ${res.status}`);
+  }
+  const data = (await res.json()) as StandardsEvaluationSummary;
+
+  const lines: string[] = [`### Évaluation standards — ${startup_id}`];
+
+  if (typeof data.score === "number") {
+    lines.push(`**Score global :** ${data.score}`);
+  }
+
+  const skip = new Set(["startup_id", "score"]);
+  for (const [key, value] of Object.entries(data)) {
+    if (skip.has(key) || value === null || value === undefined) continue;
+    if (typeof value === "object") {
+      lines.push(`\n**${key}**`);
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        lines.push(`- **${k}** : ${v}`);
+      }
+    } else {
+      lines.push(`- **${key}** : ${value}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
 const searchStartupsTool: ChatCompletionTool = {
@@ -251,10 +291,30 @@ const getStartupMembersTool: ChatCompletionTool = {
   },
 };
 
+const getStartupStandardsEvaluationTool: ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "get_startup_standards_evaluation",
+    description:
+      "Récupère le résumé de l'évaluation standards (standards.beta.gouv.fr) d'une startup par son slug.",
+    parameters: {
+      type: "object",
+      properties: {
+        startup_id: {
+          type: "string",
+          description: "Slug de la startup (ex: recosante)",
+        },
+      },
+      required: ["startup_id"],
+    },
+  },
+};
+
 export const tools = [
   searchStartupsTool,
   getStartupDetailTool,
   getStartupMembersTool,
+  getStartupStandardsEvaluationTool,
 ];
 
 export const handlers: Record<
@@ -269,6 +329,8 @@ export const handlers: Record<
       args["id"] as string,
       (args["include_previous"] as boolean) ?? false,
     ),
+  get_startup_standards_evaluation: (args) =>
+    get_startup_standards_evaluation(args["startup_id"] as string),
 };
 
 export function reset(): void {
