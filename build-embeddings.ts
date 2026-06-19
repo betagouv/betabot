@@ -449,13 +449,14 @@ async function buildIncubatorsEmbeddings() {
   const texts: string[] = [];
 
   for (const [id, incubator] of Object.entries(raw)) {
-    const startupNames = incubator.startups
+    const startups = incubator.startups || [];
+    const startupNames = startups
       .slice(0, 10)
       .map((s) => s.name)
       .join(", ");
     const summary =
-      incubator.startups.length > 10
-        ? `${startupNames}… (${incubator.startups.length} startups)`
+      startups.length > 10
+        ? `${startupNames}… (${startups.length} startups)`
         : startupNames;
 
     entries.push({
@@ -464,7 +465,7 @@ async function buildIncubatorsEmbeddings() {
       contact: incubator.contact,
       website: incubator.website,
       github: incubator.github,
-      startup_count: incubator.startups.length,
+      startup_count: startups.length,
       startups_summary: summary,
     });
 
@@ -517,7 +518,7 @@ async function buildDsfrDocsEmbeddings() {
 // ─── Job 10: WTTJ job offers ─────────────────────────────────────────────────
 
 async function buildWttjEmbeddings() {
-  console.log("\n[10/10] Building WTTJ job offers embeddings…");
+  console.log("\n[10/11] Building WTTJ job offers embeddings…");
   const baseDir = path.join(DATA_DIR, "wttj");
   if (!fs.existsSync(baseDir)) {
     console.log("  ⚠ wttj directory not found, skipping");
@@ -533,7 +534,25 @@ async function buildWttjEmbeddings() {
         return false;
       }
     });
-  await buildMdDocsEmbeddings("WTTJ", orgDirs, baseDir, "No WTTJ job offers found");
+  await buildMdDocsEmbeddings(
+    "WTTJ",
+    orgDirs,
+    baseDir,
+    "No WTTJ job offers found",
+  );
+}
+
+// ─── Job 11: Messagerie docs ─────────────────────────────────────────────────
+
+async function buildMessagerieDocsEmbeddings() {
+  console.log("\n[11/11] Building messagerie docs embeddings…");
+  const dir = path.join(DATA_DIR, "docs-messagerie");
+  await buildMdDocsEmbeddings(
+    "messagerie",
+    [dir],
+    dir,
+    "No messagerie doc files found",
+  );
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -553,6 +572,7 @@ async function main() {
   await buildFranceconnectDocsEmbeddings();
   await buildDsfrDocsEmbeddings();
   await buildWttjEmbeddings();
+  await buildMessagerieDocsEmbeddings();
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);

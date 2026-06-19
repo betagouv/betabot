@@ -94,14 +94,19 @@ Every searchable source has two build-time outputs:
 
 Sources and their index locations:
 
-| Source          | Bin / BM25 prefix              | Index JSON                                |
-| --------------- | ------------------------------ | ----------------------------------------- |
-| Members         | `data/index/members`           | implicit (members.json is the index)      |
-| Startups        | `data/index/startups`          | implicit (startups.json is the index)     |
-| Git repos       | `data/gitscan/repos`           | `data/gitscan/repos.index.json`           |
-| Docs            | `data/doc.incubateur.net/docs` | `data/doc.incubateur.net/docs.index.json` |
-| PeerTube videos | `data/peertube/videos`         | `data/peertube/videos.index.json`         |
-| Incubators      | `data/API/incubators`          | `data/API/incubators.index.json`          |
+| Source               | Bin / BM25 prefix                   | Index JSON                                     |
+| -------------------- | ----------------------------------- | ---------------------------------------------- |
+| Members              | `data/index/members`                | implicit (members.json is the index)           |
+| Startups             | `data/index/startups`               | implicit (startups.json is the index)          |
+| Git repos            | `data/gitscan/repos`                | `data/gitscan/repos.index.json`                |
+| Docs (communauté)    | `data/doc.incubateur.net/docs`      | `data/doc.incubateur.net/docs.index.json`      |
+| PeerTube videos      | `data/peertube/videos`              | `data/peertube/videos.index.json`              |
+| Incubators           | `data/API/incubators`               | `data/API/incubators.index.json`               |
+| ProConnect docs      | `data/docs-proconnect/docs`         | `data/docs-proconnect/docs.index.json`         |
+| FranceConnect docs   | `data/docs-franceconnect/docs`      | `data/docs-franceconnect/docs.index.json`      |
+| DSFR docs            | `data/docs-dsfr/docs`               | `data/docs-dsfr/docs.index.json`               |
+| WTTJ job offers      | `data/wttj/docs`                    | `data/wttj/docs.index.json`                    |
+| Messagerie docs      | `data/docs-messagerie/docs`         | `data/docs-messagerie/docs.index.json`         |
 
 ---
 

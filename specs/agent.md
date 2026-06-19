@@ -40,29 +40,42 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 - Always use tools for factual answers — never guess names or data.
 - For statistical/aggregation questions (counts, rankings, distributions) prefer `query_data` over chaining semantic searches.
 - For "actualité" questions use: calendar, doc updates, PeerTube videos, org changelogs.
+- For email/DNS configuration questions (MX, DKIM, DMARC, SPF, messagerie) use `search_docs_messagerie` in addition to `search_docs`.
 - Entity linking rules (always add a link when mentioning):
   - Startup → `https://beta.gouv.fr/startups/[ghid]`
   - Member → `https://espace-membre.beta.gouv.fr/community/[username]`
   - Git repo → `https://github.com/[ORG]/[REPO]`
   - Git org → `https://github.com/[ORG]`
   - Doc page → `https://doc.incubateur.net/[PATH]` (no `.md` suffix)
+  - ProConnect doc → use `url` from search result if available, else `https://partenaires.proconnect.gouv.fr/docs/[PATH]`
+  - FranceConnect doc → use `url` from search result if available, else `https://docs.partenaires.franceconnect.gouv.fr/[PATH]`
+  - DSFR doc → use `url` from search result if available, else `https://www.systeme-de-design.gouv.fr/[PATH]`
+  - Messagerie doc → use `url` from search result
   - Standard → `https://github.com/betagouv/standards/blob/main/[categorie]/[standard]`
 - Cite sources; standard footer links available (doc, espace-membre, beta.gouv.fr, standards).
 
 ## Tools registered
 
-| Module                | Tools                                                          |
-| --------------------- | -------------------------------------------------------------- |
-| `tools/members.ts`    | `search_members`, `get_member_detail`, `get_member_startups`   |
-| `tools/startups.ts`   | `search_startups`, `get_startup_detail`, `get_startup_members` |
-| `tools/repos.ts`      | `search_repos`, `get_repo_detail`                              |
-| `tools/docs.ts`       | `search_docs`, `get_doc_page`                                  |
-| `tools/calendar.ts`   | `get_calendar`                                                 |
-| `tools/videos.ts`     | `search_videos`, `get_videos`                                  |
-| `tools/incubators.ts` | `search_incubators`, `get_incubator_detail`                    |
-| `tools/sqlite.ts`     | `query_data`                                                   |
+| Module                       | Tools                                                          |
+| ---------------------------- | -------------------------------------------------------------- |
+| `tools/members.ts`           | `search_members`, `get_member_detail`, `get_member_startups`   |
+| `tools/startups.ts`          | `search_startups`, `get_startup_detail`, `get_startup_members` |
+| `tools/repos.ts`             | `search_repos`, `get_repo_detail`, `get_repo_changelog`        |
+| `tools/docs.ts`              | `search_docs`, `get_doc_page`                                  |
+| `tools/calendar.ts`          | `get_calendar`                                                 |
+| `tools/videos.ts`            | `search_videos`, `get_videos`                                  |
+| `tools/incubators.ts`        | `search_incubators`, `get_incubator_detail`                    |
+| `tools/sqlite.ts`            | `query_data`                                                   |
+| `tools/docs-proconnect.ts`   | `search_docs_proconnect`, `get_doc_proconnect_page`            |
+| `tools/docs-franceconnect.ts`| `search_docs_franceconnect`, `get_doc_franceconnect_page`      |
+| `tools/docs-dsfr.ts`         | `search_docs_dsfr`, `get_doc_dsfr_page`                        |
+| `tools/docs-messagerie.ts`   | `search_docs_messagerie`, `get_doc_messagerie_page`            |
+| `tools/wttj.ts`              | `search_wttj_jobs`, `get_wttj_job_page`                        |
+| `tools/changelog-startups.ts`| `get_startup_updates`                                          |
 
 Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args) => Promise<unknown>>`.
+
+Doc-based tools (`docs-*.ts`, `wttj.ts`) are built with the `makeDocsTool()` factory from `tools/docs-base.ts`, which handles lazy-loading of `.embeddings.bin`, `.bm25.json`, and `.index.json` on first use.
 
 ## Debug output
 

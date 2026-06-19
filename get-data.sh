@@ -31,6 +31,9 @@ npx tsx fetch-docs.ts https://docs.partenaires.franceconnect.gouv.fr "$DATA_DIR/
 npx tsx fetch-docs.ts https://www.systeme-de-design.gouv.fr/version-courante/fr/premiers-pas "$DATA_DIR/docs-dsfr/premiers-pas"
 npx tsx fetch-docs.ts https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux "$DATA_DIR/docs-dsfr/fondamentaux"
 
+mkdir -p "$DATA_DIR/docs-messagerie"
+npx tsx fetch-messagerie-docs.ts
+
 mkdir -p "$DATA_DIR/peertube"
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=animation_beta&sort=-createdAt" -o "$DATA_DIR/peertube/animation_beta.json"
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=lasuite_modedemploi&sort=-createdAt" -o "$DATA_DIR/peertube/lasuite_modedemploi.json"
