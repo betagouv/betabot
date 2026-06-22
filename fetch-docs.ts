@@ -47,10 +47,13 @@ const crawler = new CheerioCrawler({
   maxRequestsPerCrawl: 100,
 
   async requestHandler({ request, $, enqueueLinks }) {
+    if (/\.pdf(\?|#|$)/i.test(request.url)) return;
+
     await enqueueLinks({
       globs: [glob],
       transformRequestFunction(req) {
         req.url = req.url.split("?")[0].split("#")[0];
+        if (/\.pdf$/i.test(req.url)) return false;
         return req;
       },
     });
