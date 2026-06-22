@@ -168,6 +168,8 @@ export class Orchestrator {
     this.client = new OpenAI({
       baseURL: config.openai.baseUrl,
       apiKey: config.openai.apiKey,
+      timeout: config.openai.timeoutMs,
+      maxRetries: 5,
     });
   }
 
