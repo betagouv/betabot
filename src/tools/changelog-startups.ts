@@ -5,22 +5,37 @@ import { config } from "../config.js";
 
 const DATA = config.dataDir;
 
-let changelog: Record<string, string> | null = null;
+interface StartupChangelog {
+  diff: string;
+  lastModified: string | null;
+}
+
+interface ChangelogData {
+  changelogs: Record<string, StartupChangelog>;
+}
+
+let data: ChangelogData | null = null;
 
 function ensureLoaded() {
-  if (changelog) return;
-  changelog = JSON.parse(
+  if (data) return;
+  const raw = JSON.parse(
     fs.readFileSync(path.join(DATA, "changelog-startups.json"), "utf-8"),
-  ) as Record<string, string>;
+  ) as ChangelogData;
+  data = { changelogs: raw.changelogs ?? {} };
+}
+
+export function getStartupLastModified(id: string): string | null {
+  ensureLoaded();
+  return data!.changelogs[id]?.lastModified ?? null;
 }
 
 async function get_startup_updates(
   id: string,
-): Promise<{ id: string; diff: string } | null> {
+): Promise<{ id: string; diff: string; lastModified: string | null } | null> {
   ensureLoaded();
-  const diff = changelog![id];
-  if (!diff) return null;
-  return { id, diff };
+  const entry = data!.changelogs[id];
+  if (!entry) return null;
+  return { id, diff: entry.diff, lastModified: entry.lastModified };
 }
 
 const getStartupUpdatesTool: ChatCompletionTool = {
@@ -54,5 +69,5 @@ export const handlers: Record<
 };
 
 export function reset(): void {
-  changelog = null;
+  data = null;
 }

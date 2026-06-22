@@ -1,6 +1,6 @@
 # betabot
 
-Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, and the Design Système de l'État (DSFR), and job offers from WelcomeKit (WTTJ).
+Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), email management documentation from docs.numerique.gouv.fr, and job offers from WelcomeKit (WTTJ).
 
 Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls.
 
@@ -20,6 +20,8 @@ Detailed specs : [./specs](./specs)
 - _Comment intégrer ProConnect avec OIDC ?_
 - _Quelle est la différence entre FranceConnect et AgentConnect ?_
 - _Comment utiliser les boutons du DSFR ?_
+- _Comment configurer DKIM et DMARC pour mon domaine ?_
+- _Comment accéder à la messagerie numerique.gouv.fr ?_
 - _Quelles offres d'emploi sont disponibles sur WelcomeKit ?_
 - _Y a-t-il des postes de développeur en télétravail ?_
 
@@ -49,6 +51,7 @@ Tool dispatcher
   ├── search_docs_proconnect / get_doc_proconnect_page
   ├── search_docs_franceconnect / get_doc_franceconnect_page
   ├── search_docs_dsfr / get_doc_dsfr_page
+  ├── search_docs_messagerie / get_doc_messagerie_page
   ├── search_wttj_jobs / get_wttj_job_page
   ├── get_startup_updates
   ├── get_calendar
@@ -122,6 +125,12 @@ Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee]
 | DSFR (premiers pas)         | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
 | DSFR (fondamentaux)         | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
 
+The email management documentation uses `fetch-messagerie-docs.ts` — fetches 11 documents from the `docs.numerique.gouv.fr` REST API (`/formatted-content/?content_format=markdown`), reads `title` and `content` from the JSON response, and writes one markdown file per document with YAML frontmatter.
+
+| Source                  | API                                                                          | Output                    |
+| ----------------------- | ---------------------------------------------------------------------------- | ------------------------- |
+| Messagerie (email) docs | `https://docs.numerique.gouv.fr/api/v1.0/documents/{id}/content/`           | `data/docs-messagerie/`   |
+
 The startup changelog is fetched from the GitHub Pages-rendered diff page and parsed by `src/parse-startup-changelog.ts` into `data/changelog-startups.json` — a map of startup slug → raw git diff. This powers the `get_startup_updates` tool.
 
 | Source                  | URL                                                              | Output                         |
@@ -146,7 +155,7 @@ npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
 npm run embed
 ```
 
-Embeds chunks across 10 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
+Embeds chunks across 11 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
 
 ```sh
 npm run embed -- --force

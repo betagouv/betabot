@@ -37,11 +37,32 @@ On subsequent runs, `git pull` updates each repo in-place.
 
 Generic TypeScript crawler using **crawlee** + **@mozilla/readability** + **turndown**. Run via `npx tsx fetch-docs.ts <start-url> <output-dir>`. Requires no API key. Crawls up to 100 pages per run within the same URL path prefix, extracts article content via Readability, converts to markdown with Turndown.
 
-| Output                              | Source                                                    |
-| ----------------------------------- | --------------------------------------------------------- |
-| `data/docs-proconnect/pages/*.md`   | `https://partenaires.proconnect.gouv.fr/docs` (crawled)  |
+| Output                                    | Source                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------- |
+| `data/docs-proconnect/*.md`               | `https://partenaires.proconnect.gouv.fr/docs` (crawled)                     |
+| `data/docs-franceconnect/*.md`            | `https://docs.partenaires.franceconnect.gouv.fr` (crawled)                  |
+| `data/docs-dsfr/premiers-pas/*.md`        | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` (crawled)            |
+| `data/docs-dsfr/fondamentaux/*.md`        | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` (crawled)            |
 
 To add future web-crawled sources, add another `npx tsx fetch-docs.ts <url> <output-dir>` call to `get-data.sh` and a matching embedding job + tool.
+
+### Email management docs (fetch-messagerie-docs.ts)
+
+Fetches 11 documents from the `docs.numerique.gouv.fr` REST API. No API key required (documents are public). For each document ID, calls:
+
+```
+GET /api/v1.0/documents/{id}/formatted-content/?content_format=markdown
+```
+
+Response is JSON `{ id, title, content, … }`. Writes one file per document:
+
+```
+data/docs-messagerie/{id}.md
+```
+
+Each file has YAML frontmatter (`title` from the JSON response, `url` pointing to the public docs page) followed by the `content` field as the body.
+
+Document IDs are hardcoded in the script. To add more, extend the `DOCUMENT_IDS` array.
 
 ### WelcomeKit job offers (fetch-wttj.ts)
 
@@ -105,7 +126,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Ten sequential jobs. Each job:
+Eleven sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -230,7 +251,7 @@ Index entry type:
 
 ### Job 7 — ProConnect docs
 
-Source: all `.md` files under `data/docs-proconnect/pages/` (written by `fetch-docs.ts`).
+Source: all `.md` files under `data/docs-proconnect/` (written by `fetch-docs.ts`).
 
 Per file, same two chunk types as Job 4: front matter intro chunk (from `description`) and section chunks from `extractSections`. Sections with `content.length < 30` are skipped.
 
@@ -238,7 +259,23 @@ Embedding text per chunk: `"[{breadcrumb}]\n{content}"` — `content` truncated 
 
 Outputs: `data/docs-proconnect/docs.embeddings.bin`, `data/docs-proconnect/docs.bm25.json`, `data/docs-proconnect/docs.index.json`
 
-Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt }`), `path` relative to `data/docs-proconnect/pages/`.
+Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt, url? }`).
+
+### Job 8 — FranceConnect docs
+
+Source: all `.md` files under `data/docs-franceconnect/` (written by `fetch-docs.ts`).
+
+Same chunking and embedding strategy as Job 7.
+
+Outputs: `data/docs-franceconnect/docs.embeddings.bin`, `data/docs-franceconnect/docs.bm25.json`, `data/docs-franceconnect/docs.index.json`
+
+### Job 9 — DSFR docs
+
+Source: all `.md` files under `data/docs-dsfr/premiers-pas/` and `data/docs-dsfr/fondamentaux/` (both subdirs written by `fetch-docs.ts`). Both are passed as source dirs; output lands in `data/docs-dsfr/`.
+
+Same chunking and embedding strategy as Job 7.
+
+Outputs: `data/docs-dsfr/docs.embeddings.bin`, `data/docs-dsfr/docs.bm25.json`, `data/docs-dsfr/docs.index.json`
 
 ### Job 10 — WTTJ job offers
 
@@ -253,6 +290,16 @@ Skipped entirely if `data/wttj/` directory does not exist.
 Outputs: `data/wttj/docs.embeddings.bin`, `data/wttj/docs.bm25.json`, `data/wttj/docs.index.json`
 
 Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt }` with `path` relative to `data/wttj/` (e.g., `ci7AvS/senior-backend-engineer-abc123.md`).
+
+### Job 11 — Messagerie docs
+
+Source: all `.md` files under `data/docs-messagerie/` (written by `fetch-messagerie-docs.ts`). Skipped entirely if directory does not exist.
+
+Same chunking and embedding strategy as Job 4: front matter intro chunk (from `description` if present) and section chunks from `extractSections`.
+
+Outputs: `data/docs-messagerie/docs.embeddings.bin`, `data/docs-messagerie/docs.bm25.json`, `data/docs-messagerie/docs.index.json`
+
+Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt, url }` with `url` pointing to `https://docs.numerique.gouv.fr/docs/{id}/`.
 
 ---
 
