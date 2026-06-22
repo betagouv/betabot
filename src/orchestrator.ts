@@ -210,6 +210,25 @@ export class Orchestrator {
     const debug = (...args: unknown[]) =>
       process.stderr.write(`[debug] ${args.join(" ")}\n`);
 
+    const debugHeaders = (httpResponse: { headers: { has(n: string): boolean; get(n: string): string | null } }) => {
+      const interesting = [
+        "x-request-id",
+        "cf-ray",
+        "x-ratelimit-limit-requests",
+        "x-ratelimit-remaining-requests",
+        "x-ratelimit-limit-tokens",
+        "x-ratelimit-remaining-tokens",
+        "x-ratelimit-reset-requests",
+        "x-ratelimit-reset-tokens",
+        "retry-after",
+      ];
+      const found = interesting
+        .filter((h) => httpResponse.headers.has(h))
+        .map((h) => `${h}=${httpResponse.headers.get(h)}`)
+        .join(" ");
+      if (found) debug(`response headers: ${found}`);
+    };
+
     debug(`handle key=${key} text=${JSON.stringify(input.text)}`);
     debug(`history length=${history.length}`);
 
@@ -232,16 +251,32 @@ export class Orchestrator {
     while (iterations < MAX_TOOL_ITERATIONS) {
       iterations++;
       debug(`--- LLM iteration ${iterations}/${MAX_TOOL_ITERATIONS} ---`);
+      const payloadChars = messages.reduce((sum, m) => {
+        const c = m.content;
+        return sum + (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length);
+      }, 0);
       debug(
-        `sending ${messages.length} messages to model=${config.openai.model}`,
+        `sending ${messages.length} messages to model=${config.openai.model} (~${payloadChars} chars)`,
       );
 
-      const response = await this.client.chat.completions.create({
-        model: config.openai.model,
-        messages,
-        tools: ALL_TOOLS,
-        tool_choice: "auto",
-      });
+      let response: Awaited<ReturnType<typeof this.client.chat.completions.create>>;
+      try {
+        const { data, response: httpResponse } = await this.client.chat.completions.create({
+          model: config.openai.model,
+          messages,
+          tools: ALL_TOOLS,
+          tool_choice: "auto",
+        }).withResponse();
+        debugHeaders(httpResponse);
+        response = data;
+      } catch (err) {
+        if (err instanceof OpenAI.APIError && err.headers) {
+          const rid = err.headers["x-request-id"];
+          if (rid) debug(`  x-request-id=${rid}`);
+        }
+        debug(`LLM call failed at iteration ${iterations}: ${err}`);
+        throw err;
+      }
 
       const choice = response.choices[0];
       if (!choice) throw new Error("No response from LLM");
@@ -318,10 +353,27 @@ export class Orchestrator {
       content:
         "Réponds maintenant à la question en te basant uniquement sur les informations récupérées ci-dessus. Ne fais plus d'appel d'outil.",
     });
-    const finalResponse = await this.client.chat.completions.create({
-      model: config.openai.model,
-      messages,
-    });
+    const fallbackPayloadChars = messages.reduce((sum, m) => {
+      const c = m.content;
+      return sum + (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length);
+    }, 0);
+    debug(`sending fallback summary request (~${fallbackPayloadChars} chars)`);
+    let finalResponse: Awaited<ReturnType<typeof this.client.chat.completions.create>>;
+    try {
+      const { data, response: httpResponse } = await this.client.chat.completions.create({
+        model: config.openai.model,
+        messages,
+      }).withResponse();
+      debugHeaders(httpResponse);
+      finalResponse = data;
+    } catch (err) {
+      if (err instanceof OpenAI.APIError && err.headers) {
+        const rid = err.headers["x-request-id"];
+        if (rid) debug(`  x-request-id=${rid}`);
+      }
+      debug(`LLM fallback call failed: ${err}`);
+      throw err;
+    }
 
     const text = finalResponse.choices[0]?.message.content ?? "";
     debug(`fallback final response (${text.length} chars)`);
