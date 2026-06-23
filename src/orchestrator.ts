@@ -88,11 +88,12 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - la documentation messagerie (email), utilise le champ \`url\` retourné par l'outil de recherche
  - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
 
-Cite tes sources avec leurs URLS en fin de message
+Cite tes sources avec leurs URLS en fin de message. exemples:
  - [documentation beta.gouv.fr](https://doc.incubateur.net)
  - [espace membre](https://espace-membre.beta.gouv.fr)
  - [site beta.gouv.fr](https://beta.gouv.fr)
  - [standards des produits beta.gouv.fr](https://standards.beta.gouv.fr)
+ - calendrier: ${config.calendarIcsUrl}
  - ton code source est dispo sur github.com/betagouv/betabot
  - ne mentionne pas les tools internes utilisés
  - présente et explique ls requetes SQL utilisées
@@ -213,7 +214,9 @@ export class Orchestrator {
     const debug = (...args: unknown[]) =>
       process.stderr.write(`[debug] ${args.join(" ")}\n`);
 
-    const debugHeaders = (httpResponse: { headers: { has(n: string): boolean; get(n: string): string | null } }) => {
+    const debugHeaders = (httpResponse: {
+      headers: { has(n: string): boolean; get(n: string): string | null };
+    }) => {
       const interesting = [
         "x-request-id",
         "cf-ray",
@@ -256,20 +259,28 @@ export class Orchestrator {
       debug(`--- LLM iteration ${iterations}/${MAX_TOOL_ITERATIONS} ---`);
       const payloadChars = messages.reduce((sum, m) => {
         const c = m.content;
-        return sum + (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length);
+        return (
+          sum +
+          (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length)
+        );
       }, 0);
       debug(
         `sending ${messages.length} messages to model=${config.openai.model} (~${payloadChars} chars)`,
       );
 
-      let response: Awaited<ReturnType<typeof this.client.chat.completions.create>>;
+      let response: Awaited<
+        ReturnType<typeof this.client.chat.completions.create>
+      >;
       try {
-        const { data, response: httpResponse } = await this.client.chat.completions.create({
-          model: config.openai.model,
-          messages,
-          tools: ALL_TOOLS,
-          tool_choice: "auto",
-        }).withResponse();
+        const { data, response: httpResponse } =
+          await this.client.chat.completions
+            .create({
+              model: config.openai.model,
+              messages,
+              tools: ALL_TOOLS,
+              tool_choice: "auto",
+            })
+            .withResponse();
         debugHeaders(httpResponse);
         response = data;
       } catch (err) {
@@ -315,35 +326,37 @@ export class Orchestrator {
       // Dispatch tool calls
       debug(`dispatching ${assistantMessage.tool_calls.length} tool call(s)`);
       const toolResults: ChatCompletionToolMessageParam[] = await Promise.all(
-        assistantMessage.tool_calls.filter((tc) => tc.type === "function").map(async (tc) => {
-          const handler = ALL_HANDLERS[tc.function.name];
-          let result: unknown;
-          debug(`  tool=${tc.function.name} args=${tc.function.arguments}`);
-          if (!handler) {
-            result = { error: `Unknown tool: ${tc.function.name}` };
-            debug(`  -> unknown tool`);
-          } else {
-            try {
-              const args = JSON.parse(tc.function.arguments) as Record<
-                string,
-                unknown
-              >;
-              result = await handler(args);
-              const resultStr = JSON.stringify(result);
-              debug(
-                `  -> result (${resultStr.length} chars): ${resultStr.slice(0, 200)}${resultStr.length > 200 ? "..." : ""}`,
-              );
-            } catch (err) {
-              result = { error: String(err) };
-              debug(`  -> error: ${err}`);
+        assistantMessage.tool_calls
+          .filter((tc) => tc.type === "function")
+          .map(async (tc) => {
+            const handler = ALL_HANDLERS[tc.function.name];
+            let result: unknown;
+            debug(`  tool=${tc.function.name} args=${tc.function.arguments}`);
+            if (!handler) {
+              result = { error: `Unknown tool: ${tc.function.name}` };
+              debug(`  -> unknown tool`);
+            } else {
+              try {
+                const args = JSON.parse(tc.function.arguments) as Record<
+                  string,
+                  unknown
+                >;
+                result = await handler(args);
+                const resultStr = JSON.stringify(result);
+                debug(
+                  `  -> result (${resultStr.length} chars): ${resultStr.slice(0, 200)}${resultStr.length > 200 ? "..." : ""}`,
+                );
+              } catch (err) {
+                result = { error: String(err) };
+                debug(`  -> error: ${err}`);
+              }
             }
-          }
-          return {
-            role: "tool" as const,
-            tool_call_id: tc.id,
-            content: JSON.stringify(result),
-          };
-        }),
+            return {
+              role: "tool" as const,
+              tool_call_id: tc.id,
+              content: JSON.stringify(result),
+            };
+          }),
       );
 
       messages.push(...toolResults);
@@ -358,15 +371,23 @@ export class Orchestrator {
     });
     const fallbackPayloadChars = messages.reduce((sum, m) => {
       const c = m.content;
-      return sum + (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length);
+      return (
+        sum +
+        (typeof c === "string" ? c.length : JSON.stringify(c ?? "").length)
+      );
     }, 0);
     debug(`sending fallback summary request (~${fallbackPayloadChars} chars)`);
-    let finalResponse: Awaited<ReturnType<typeof this.client.chat.completions.create>>;
+    let finalResponse: Awaited<
+      ReturnType<typeof this.client.chat.completions.create>
+    >;
     try {
-      const { data, response: httpResponse } = await this.client.chat.completions.create({
-        model: config.openai.model,
-        messages,
-      }).withResponse();
+      const { data, response: httpResponse } =
+        await this.client.chat.completions
+          .create({
+            model: config.openai.model,
+            messages,
+          })
+          .withResponse();
       debugHeaders(httpResponse);
       finalResponse = data;
     } catch (err) {

@@ -46,7 +46,12 @@ curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=datagouv
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.mte&sort=-createdAt" -o "$DATA_DIR/peertube/fabnum.mte.json"
 curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=ruche_numerique&sort=-createdAt" -o "$DATA_DIR/peertube/ruche_numerique.json"
 
-curl "https://calendar.google.com/calendar/ical/0ieonqap1r5jeal5ugeuhoovlg%40group.calendar.google.com/public/basic.ics" -o "$DATA_DIR/calendar.ics"
+# public calendar
+if [ -n "$CALENDAR_ICS_URL" ]; then
+  curl -L "$CALENDAR_ICS_URL" -o "$DATA_DIR/calendar.ics"
+else
+  echo "CALENDAR_ICS_URL is not set, skipping calendar download"
+fi
 
 # startup changelog
 curl -L "https://betagouv.github.io/beta.gouv.fr/startups.html" -o "$DATA_DIR/startups-changelog.html"

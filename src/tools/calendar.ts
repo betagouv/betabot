@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import ical from "ical";
+import { RRule } from "rrule/dist/esm/index.js";
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
 
@@ -14,7 +15,10 @@ interface CalendarEvent {
   description?: string;
 }
 
-async function get_calendar(days_ahead = 14, days_back = 0): Promise<CalendarEvent[]> {
+async function get_calendar(
+  days_ahead = 14,
+  days_back = 0,
+): Promise<CalendarEvent[]> {
   const icsPath = path.join(DATA, "calendar.ics");
   if (!fs.existsSync(icsPath)) return [];
 
@@ -33,22 +37,47 @@ async function get_calendar(days_ahead = 14, days_back = 0): Promise<CalendarEve
     const start = component.start ? new Date(component.start) : null;
     const end = component.end ? new Date(component.end) : null;
 
-    if (!start || start < from || start > to) continue;
+    if (!start) continue;
 
-    events.push({
+    const baseFields = {
       summary: component.summary ?? "(sans titre)",
-      start: start.toISOString(),
-      end: end?.toISOString() ?? start.toISOString(),
       ...(component.location ? { location: component.location } : {}),
       ...(component.description
         ? { description: (component.description as string).slice(0, 500) }
         : {}),
-    });
+    };
+
+    if (component.rrule) {
+      const duration = end ? end.getTime() - start.getTime() : 0;
+      const dtstart = start
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "");
+      const rule = RRule.fromString(
+        `DTSTART:${dtstart}\nRRULE:${component.rrule}`,
+      );
+      for (const occ of rule.between(from, to, true)) {
+        events.push({
+          ...baseFields,
+          start: occ.toISOString(),
+          end: new Date(occ.getTime() + duration).toISOString(),
+        });
+      }
+    } else {
+      if (start < from || start > to) continue;
+      events.push({
+        ...baseFields,
+        start: start.toISOString(),
+        end: end?.toISOString() ?? start.toISOString(),
+      });
+    }
   }
 
   events.sort(
-    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   );
+
+  console.log({ events });
   return events;
 }
 
@@ -85,5 +114,8 @@ export const handlers: Record<
   (args: Record<string, unknown>) => Promise<unknown>
 > = {
   get_calendar: (args) =>
-    get_calendar((args["days_ahead"] as number) ?? 14, (args["days_back"] as number) ?? 0),
+    get_calendar(
+      (args["days_ahead"] as number) ?? 14,
+      (args["days_back"] as number) ?? 0,
+    ),
 };

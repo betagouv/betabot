@@ -2,7 +2,7 @@
 
 Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), email management documentation from docs.numerique.gouv.fr, and job offers from WelcomeKit (WTTJ).
 
-Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls.
+Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls. Public data only.
 
 Detailed specs : [./specs](./specs)
 
@@ -127,15 +127,15 @@ Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee]
 
 The email management documentation uses `fetch-messagerie-docs.ts` — fetches 11 documents from the `docs.numerique.gouv.fr` REST API (`/formatted-content/?content_format=markdown`), reads `title` and `content` from the JSON response, and writes one markdown file per document with YAML frontmatter.
 
-| Source                  | API                                                                          | Output                    |
-| ----------------------- | ---------------------------------------------------------------------------- | ------------------------- |
-| Messagerie (email) docs | `https://docs.numerique.gouv.fr/api/v1.0/documents/{id}/content/`           | `data/docs-messagerie/`   |
+| Source                  | API                                                               | Output                  |
+| ----------------------- | ----------------------------------------------------------------- | ----------------------- |
+| Messagerie (email) docs | `https://docs.numerique.gouv.fr/api/v1.0/documents/{id}/content/` | `data/docs-messagerie/` |
 
 The startup changelog is fetched from the GitHub Pages-rendered diff page and parsed by `src/parse-startup-changelog.ts` into `data/changelog-startups.json` — a map of startup slug → raw git diff. This powers the `get_startup_updates` tool.
 
-| Source                  | URL                                                              | Output                         |
-| ----------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| Startup changelog diffs | `https://betagouv.github.io/beta.gouv.fr/startups.html`         | `data/changelog-startups.json` |
+| Source                  | URL                                                     | Output                         |
+| ----------------------- | ------------------------------------------------------- | ------------------------------ |
+| Startup changelog diffs | `https://betagouv.github.io/beta.gouv.fr/startups.html` | `data/changelog-startups.json` |
 
 WelcomeKit job offers use `fetch-wttj.ts` — fetches published jobs from the WelcomeKit API and writes one markdown file per offer. Requires `WELCOMEKIT_TOKEN` to be set. Orgs are hardcoded in the script; to add one extend the `orgs` array in `fetch-wttj.ts`.
 

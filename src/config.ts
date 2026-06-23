@@ -18,6 +18,7 @@ export const config = {
     timeoutMs: optionalInt("OPENAI_TIMEOUT_MS", 30_000),
   },
   dataDir: optional("DATA_DIR", "./data"),
+  calendarIcsUrl: optional("CALENDAR_ICS_URL", ""),
   matrix: {
     homeserver: process.env["MATRIX_HOMESERVER"],
     user: process.env["MATRIX_USER"],
