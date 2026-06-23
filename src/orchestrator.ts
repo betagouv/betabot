@@ -312,7 +312,7 @@ export class Orchestrator {
       // Dispatch tool calls
       debug(`dispatching ${assistantMessage.tool_calls.length} tool call(s)`);
       const toolResults: ChatCompletionToolMessageParam[] = await Promise.all(
-        assistantMessage.tool_calls.map(async (tc) => {
+        assistantMessage.tool_calls.filter((tc) => tc.type === "function").map(async (tc) => {
           const handler = ALL_HANDLERS[tc.function.name];
           let result: unknown;
           debug(`  tool=${tc.function.name} args=${tc.function.arguments}`);
