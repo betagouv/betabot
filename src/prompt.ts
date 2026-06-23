@@ -33,6 +33,7 @@ Lorsque tu mentionnes une entité, ajoute TOUJOURS un lien:
  - la documentation DSFR, utilise le champ \`url\` retourné par l'outil de recherche si disponible, sinon crée un lien vers https://www.systeme-de-design.gouv.fr/[PATH]
  - la documentation messagerie (email), utilise le champ \`url\` retourné par l'outil de recherche
  - un standard beta.gouv.fr, créé un lien vers https://github.com/betagouv/standards/blob/main/[categorie]/[standard]
+ - l'API beta.gouv.fr https://beta.gouv.fr/api/swagger.html
 
 Cite tes sources avec leurs URLS en fin de message. exemples:
  - [documentation beta.gouv.fr](https://doc.incubateur.net)

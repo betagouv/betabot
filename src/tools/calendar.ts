@@ -2,9 +2,13 @@ import fs from "fs";
 import path from "path";
 import ical from "ical";
 import * as rruleModule from "rrule";
-const { RRule } = rruleModule;
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
+
+// rrule CJS interop differs across environments: v2 exports named, some builds export the class directly
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RRule: typeof import("rrule").RRule | undefined =
+  (rruleModule as any).RRule ?? (rruleModule as any).default?.RRule ?? undefined;
 
 const DATA = config.dataDir;
 
@@ -48,7 +52,7 @@ async function get_calendar(
         : {}),
     };
 
-    if (component.rrule) {
+    if (component.rrule && RRule) {
       const duration = end ? end.getTime() - start.getTime() : 0;
       const dtstart = start
         .toISOString()
@@ -64,7 +68,7 @@ async function get_calendar(
           end: new Date(occ.getTime() + duration).toISOString(),
         });
       }
-    } else {
+    } else if (!component.rrule) {
       if (start < from || start > to) continue;
       events.push({
         ...baseFields,
