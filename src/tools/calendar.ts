@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import ical from "ical";
-import { RRule } from "rrule/dist/esm/index.js";
+import { RRule } from "rrule";
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
 
