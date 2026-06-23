@@ -216,6 +216,9 @@ node --import tsx evals/report.ts evals/results/result.json [base.json]
 
 # Regenerate fixtures from your actual datasets (after ./get-data.sh)
 npm run eval:generate
+
+# Show pass-rate trend across all saved runs
+npm run eval:trend
 ```
 
 Results are saved to `evals/results/` (gitignored) as timestamped JSON files.

@@ -2,285 +2,197 @@
   {
     "id": "member-skill-op-rateur",
     "question": "qui sait faire du opérateur ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": []
   },
   {
     "id": "member-skill-r",
     "question": "qui sait faire du R ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-skill-agilit",
     "question": "qui sait faire du Agilité ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-skill-tableaux-de-bord",
     "question": "qui sait faire du Tableaux de bord ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-skill-ux",
     "question": "qui sait faire du UX ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-domain-autre",
     "question": "qui travaille dans le domaine Autre ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-domain-coaching",
     "question": "qui travaille dans le domaine Coaching ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-domain-attributaire",
     "question": "qui travaille dans le domaine Attributaire ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-domain-data",
     "question": "qui travaille dans le domaine Data ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-domain-design",
     "question": "qui travaille dans le domaine Design ?",
-    "expect_tools": [
-      "search_members"
-    ]
+    "expect_tools": ["search_members"]
   },
   {
     "id": "member-detail-eugenie-levallois",
     "question": "quel est le rôle de Eugenie Levallois et sur quelles startups travaille-t-il/elle ?",
-    "expect_tools": [
-      "search_members",
-      "get_member_startups"
-    ]
+    "expect_tools": ["search_members", "get_member_startups"]
   },
   {
     "id": "member-detail-valentin-matton",
     "question": "quel est le rôle de Valentin Matton et sur quelles startups travaille-t-il/elle ?",
-    "expect_tools": [
-      "search_members",
-      "get_member_startups"
-    ]
+    "expect_tools": ["search_members", "get_member_startups"]
   },
   {
     "id": "member-detail-am-lie-kro",
     "question": "quel est le rôle de Amélie Kro et sur quelles startups travaille-t-il/elle ?",
-    "expect_tools": [
-      "search_members",
-      "get_member_startups"
-    ]
+    "expect_tools": ["search_members", "get_member_startups"]
   },
   {
     "id": "member-detail-christophe-henry",
     "question": "quel est le rôle de Christophe Henry et sur quelles startups travaille-t-il/elle ?",
-    "expect_tools": [
-      "search_members",
-      "get_member_startups"
-    ]
+    "expect_tools": ["search_members", "get_member_startups"]
   },
   {
     "id": "member-detail-beno-t-li-nard",
     "question": "quel est le rôle de Benoît Liénard et sur quelles startups travaille-t-il/elle ?",
-    "expect_tools": [
-      "search_members",
-      "get_member_startups"
-    ]
+    "expect_tools": ["search_members", "get_member_startups"]
   },
   {
     "id": "startup-about-ecobalyse",
     "question": "que fait la startup Ecobalyse ?",
-    "expect_tools": [
-      "search_startups"
-    ]
+    "expect_tools": ["search_startups"]
   },
   {
     "id": "startup-about-l-immersion-facile",
     "question": "que fait la startup Immersion facilitée ?",
-    "expect_tools": [
-      "search_startups"
-    ]
+    "expect_tools": ["search_startups"]
   },
   {
     "id": "startup-about-tdb-apprentissage",
     "question": "que fait la startup Tableau de bord de l'apprentissage ?",
-    "expect_tools": [
-      "search_startups"
-    ]
+    "expect_tools": ["search_startups"]
   },
   {
     "id": "startup-about-histologe",
     "question": "que fait la startup Signal Logement (ex:Histologe) ?",
-    "expect_tools": [
-      "search_startups"
-    ]
+    "expect_tools": ["search_startups"]
   },
   {
     "id": "startup-about-diagoriente",
     "question": "que fait la startup Diagoriente ?",
-    "expect_tools": [
-      "search_startups"
-    ]
+    "expect_tools": ["search_startups"]
   },
   {
     "id": "startup-team-opera-comique-and-mediation",
     "question": "qui est dans l'équipe de Patrimoine vivant - Opéra-Comique ?",
-    "expect_tools": [
-      "search_startups",
-      "get_startup_members"
-    ]
+    "expect_tools": ["search_startups", "get_startup_members"]
   },
   {
     "id": "startup-team-infomedicament",
     "question": "qui est dans l'équipe de Info Médicament ?",
-    "expect_tools": [
-      "search_startups",
-      "get_startup_members"
-    ]
+    "expect_tools": ["search_startups", "get_startup_members"]
   },
   {
     "id": "startup-team-histologe",
     "question": "qui est dans l'équipe de Signal Logement (ex:Histologe) ?",
-    "expect_tools": [
-      "search_startups",
-      "get_startup_members"
-    ]
+    "expect_tools": ["search_startups", "get_startup_members"]
   },
   {
     "id": "startup-team-aplus",
     "question": "qui est dans l'équipe de Administration+ ?",
-    "expect_tools": [
-      "search_startups",
-      "get_startup_members"
-    ]
+    "expect_tools": ["search_startups", "get_startup_members"]
   },
   {
     "id": "startup-team-fichiers",
     "question": "qui est dans l'équipe de Fichiers ?",
-    "expect_tools": [
-      "search_startups",
-      "get_startup_members"
-    ]
+    "expect_tools": ["search_startups", "get_startup_members"]
   },
   {
     "id": "page-ficheproduit-md",
     "question": "c'est quoi \"Rédiger une fiche produit\" chez beta.gouv.fr ?",
-    "expect_tools": [
-      "search_pages"
-    ]
+    "expect_tools": ["search_pages"]
   },
   {
     "id": "page-recherche-md",
     "question": "c'est quoi \"Rechercher dans beta.gouv.fr\" chez beta.gouv.fr ?",
-    "expect_tools": [
-      "search_pages"
-    ]
+    "expect_tools": ["search_pages"]
   },
   {
     "id": "page-stats-md",
     "question": "c'est quoi \"Indicateurs de beta.gouv.fr\" chez beta.gouv.fr ?",
-    "expect_tools": [
-      "search_pages"
-    ]
+    "expect_tools": ["search_pages"]
   },
   {
     "id": "page-programme-investigation-md",
     "question": "c'est quoi \"Identifier le problème à résoudre\" chez beta.gouv.fr ?",
-    "expect_tools": [
-      "search_pages"
-    ]
+    "expect_tools": ["search_pages"]
   },
   {
     "id": "page-suivi-md",
     "question": "c'est quoi \"Suivi d'audience et vie privée\" chez beta.gouv.fr ?",
-    "expect_tools": [
-      "search_pages"
-    ]
+    "expect_tools": ["search_pages"]
   },
   {
     "id": "doc-comment-creer-une-nouvelle-categorie-et-",
     "question": "comment comment-creer-une-nouvelle-categorie-et-reorganiser-ses-canaux selon la documentation ?",
-    "expect_tools": [
-      "search_docs"
-    ]
+    "expect_tools": ["search_docs"]
   },
   {
     "id": "doc-readme",
     "question": "comment readme selon la documentation ?",
-    "expect_tools": [
-      "search_docs"
-    ]
+    "expect_tools": ["search_docs"]
   },
   {
     "id": "doc-cauchemar-a-beta-la-mesure-dimpact",
     "question": "comment cauchemar-a-beta-la-mesure-dimpact selon la documentation ?",
-    "expect_tools": [
-      "search_docs"
-    ]
+    "expect_tools": ["search_docs"]
   },
   {
     "id": "doc-destination-et-perimetre-de-la-documenta",
     "question": "comment destination-et-perimetre-de-la-documentation selon la documentation ?",
-    "expect_tools": [
-      "search_docs"
-    ]
+    "expect_tools": ["search_docs"]
   },
   {
     "id": "doc-readme",
     "question": "comment readme selon la documentation ?",
-    "expect_tools": [
-      "search_docs"
-    ]
+    "expect_tools": ["search_docs"]
   },
   {
     "id": "calendar-next",
     "question": "quels sont les prochains événements de la communauté ?",
-    "expect_tools": [
-      "get_calendar"
-    ]
+    "expect_tools": ["get_calendar"]
   },
   {
     "id": "calendar-week",
     "question": "y a-t-il des événements beta.gouv.fr cette semaine ?",
-    "expect_tools": [
-      "get_calendar"
-    ]
+    "expect_tools": ["get_calendar"]
   },
   {
     "id": "videos-recent",
     "question": "quelles sont les dernières vidéos publiées ?",
-    "expect_tools": [
-      "get_videos"
-    ]
+    "expect_tools": ["get_videos"]
   },
   {
     "id": "videos-bluehats",
     "question": "quelles vidéos récentes sur les BlueHats ?",
-    "expect_tools": [
-      "get_videos"
-    ]
+    "expect_tools": ["get_videos"]
   },
   {
     "id": "no-tool-greeting",
@@ -310,47 +222,56 @@
   {
     "id": "proconnect-bouton-integration",
     "question": "comment intégrer le bouton ProConnect sur mon service ?",
-    "expect_tools": ["search_docs_proconnect"]
+    "expect_tools": ["search_docs_proconnect"],
+    "expect_args": { "search_docs_proconnect": { "query": "bouton" } }
   },
   {
     "id": "proconnect-couverture",
     "question": "quelle est la couverture de ProConnect, quels sont les fournisseurs d'identité supportés ?",
-    "expect_tools": ["search_docs_proconnect"]
+    "expect_tools": ["search_docs_proconnect"],
+    "expect_args": { "search_docs_proconnect": { "query": "fournisseur" } }
   },
   {
     "id": "proconnect-oidc",
     "question": "comment fonctionne l'authentification OIDC avec ProConnect ?",
-    "expect_tools": ["search_docs_proconnect"]
+    "expect_tools": ["search_docs_proconnect"],
+    "expect_args": { "search_docs_proconnect": { "query": "oidc" } }
   },
   {
     "id": "franceconnect-integration-fs",
     "question": "comment devenir fournisseur de service FranceConnect ?",
-    "expect_tools": ["search_docs_franceconnect"]
+    "expect_tools": ["search_docs_franceconnect"],
+    "expect_args": { "search_docs_franceconnect": { "query": "fournisseur" } }
   },
   {
     "id": "franceconnect-niveaux-eidas",
     "question": "quels sont les niveaux eIDAS supportés par FranceConnect ?",
-    "expect_tools": ["search_docs_franceconnect"]
+    "expect_tools": ["search_docs_franceconnect"],
+    "expect_args": { "search_docs_franceconnect": { "query": "eidas" } }
   },
   {
     "id": "franceconnect-deconnexion",
     "question": "comment implémenter la déconnexion avec FranceConnect+ ?",
-    "expect_tools": ["search_docs_franceconnect"]
+    "expect_tools": ["search_docs_franceconnect"],
+    "expect_args": { "search_docs_franceconnect": { "query": "connexion" } }
   },
   {
     "id": "dsfr-installation",
     "question": "comment installer le Design Système de l'État (DSFR) dans mon projet ?",
-    "expect_tools": ["search_docs_dsfr"]
+    "expect_tools": ["search_docs_dsfr"],
+    "expect_args": { "search_docs_dsfr": { "query": "install" } }
   },
   {
     "id": "dsfr-couleurs",
     "question": "quelles sont les couleurs disponibles dans le DSFR ?",
-    "expect_tools": ["search_docs_dsfr"]
+    "expect_tools": ["search_docs_dsfr"],
+    "expect_args": { "search_docs_dsfr": { "query": "couleur" } }
   },
   {
     "id": "dsfr-accessibilite",
     "question": "comment rendre mon service accessible avec le DSFR ?",
-    "expect_tools": ["search_docs_dsfr"]
+    "expect_tools": ["search_docs_dsfr"],
+    "expect_args": { "search_docs_dsfr": { "query": "accessib" } }
   },
   {
     "id": "wttj-job-search",
@@ -360,6 +281,76 @@
   {
     "id": "wttj-job-dev",
     "question": "y a-t-il des postes de développeur en télétravail ?",
-    "expect_tools": ["search_wttj_jobs"]
+    "expect_tools": ["search_wttj_jobs"],
+    "expect_args": { "search_wttj_jobs": { "query": "développeur" } }
+  },
+  {
+    "id": "incubator-list",
+    "question": "quels sont les incubateurs membres du réseau beta.gouv.fr ?",
+    "expect_tools": ["search_incubators"]
+  },
+  {
+    "id": "incubator-detail-dinum",
+    "question": "que fait l'incubateur de la DINUM et quelles startups héberge-t-il ?",
+    "expect_tools": ["search_incubators", "get_incubator_detail"],
+    "expect_args": { "search_incubators": { "query": "dinum" } }
+  },
+  {
+    "id": "incubator-menj",
+    "question": "quelles startups sont dans l'incubateur du ministère de l'éducation nationale ?",
+    "expect_tools": ["search_incubators", "get_incubator_detail"],
+    "expect_args": { "search_incubators": { "query": "education" } }
+  },
+  {
+    "id": "repo-search-matomo",
+    "question": "existe-t-il un dépôt de code sur Matomo dans l'organisation betagouv ?",
+    "expect_tools": ["search_repos"],
+    "expect_args": { "search_repos": { "query": "matomo" } }
+  },
+  {
+    "id": "repo-search-typescript",
+    "question": "quels dépôts GitHub betagouv utilisent TypeScript ?",
+    "expect_tools": ["search_repos"],
+    "expect_args": { "search_repos": { "query": "typescript" } }
+  },
+  {
+    "id": "repo-changelog-beta",
+    "question": "quels sont les derniers commits du dépôt beta.gouv.fr ?",
+    "expect_tools": ["get_repo_changelog"]
+  },
+  {
+    "id": "org-changelog-betagouv",
+    "question": "quoi de neuf dans les dépôts GitHub de l'organisation betagouv cette semaine ?",
+    "expect_tools": ["get_org_changelog"]
+  },
+  {
+    "id": "startup-updates-recosante",
+    "question": "quelles sont les dernières mises à jour de la startup Recosanté ?",
+    "expect_tools": ["search_startups", "get_startup_updates"],
+    "expect_args": { "search_startups": { "query": "recosant" } }
+  },
+  {
+    "id": "startup-updates-demarches",
+    "question": "qu'est-ce qui a changé récemment dans la startup démarches simplifiées ?",
+    "expect_tools": ["search_startups", "get_startup_updates"],
+    "expect_args": { "search_startups": { "query": "demarche" } }
+  },
+  {
+    "id": "messagerie-dmarc",
+    "question": "comment configurer DMARC pour mon domaine email ?",
+    "expect_tools": ["search_docs_messagerie"],
+    "expect_args": { "search_docs_messagerie": { "query": "dmarc" } }
+  },
+  {
+    "id": "messagerie-spf-dkim",
+    "question": "comment mettre en place SPF et DKIM pour un service beta.gouv.fr ?",
+    "expect_tools": ["search_docs_messagerie"],
+    "expect_args": { "search_docs_messagerie": { "query": "dkim" } }
+  },
+  {
+    "id": "messagerie-mx",
+    "question": "comment configurer les enregistrements MX pour recevoir des emails ?",
+    "expect_tools": ["search_docs_messagerie"],
+    "expect_args": { "search_docs_messagerie": { "query": "mx" } }
   }
 ]
