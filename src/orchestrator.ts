@@ -99,6 +99,8 @@ Cite tes sources avec leurs URLS en fin de message
 `;
 
 function buildSystemPrompt(entities: DetectedEntities): string {
+  const now = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+  const timeContext = `Nous sommes le ${now}.\n\n`;
   const lines: string[] = [];
   if (entities.members.length) {
     lines.push("Membres détectés dans la question :");
@@ -112,8 +114,9 @@ function buildSystemPrompt(entities: DetectedEntities): string {
       lines.push(`  - ${e.label} : slug="${e.id}", url=${e.url}`),
     );
   }
-  if (!lines.length) return SYSTEM_PROMPT;
+  if (!lines.length) return timeContext + SYSTEM_PROMPT;
   return (
+    timeContext +
     SYSTEM_PROMPT +
     "\n\nEntités identifiées dans cette question (utilise ces slugs et URLs) :\n" +
     lines.join("\n")
