@@ -59,17 +59,54 @@ function parseResetHeader(header: string): number | null {
   return total > 0 ? total : null;
 }
 
+async function embedTexts(texts: string[], retries = 5): Promise<number[][]> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await getClient().embeddings.create({
+        model: config.openai.embedModel,
+        input: texts,
+      });
+      const result = new Array<number[]>(texts.length);
+      for (const item of response.data) {
+        result[item.index] = item.embedding;
+      }
+      return result;
+    } catch (err: unknown) {
+      const isRateLimit =
+        err instanceof Error &&
+        "status" in err &&
+        (err as { status: number }).status === 429;
+
+      if (isRateLimit && attempt < retries) {
+        const headers =
+          (err as { headers?: Record<string, string> }).headers ?? {};
+        const resetHeader = headers["x-ratelimit-reset-requests"] ?? "";
+        const resetMs = parseResetHeader(resetHeader) ?? 2000 * 2 ** attempt;
+        process.stdout.write(`\n  Rate limited — waiting ${Math.round(resetMs / 1000)}s…`);
+        await sleep(resetMs + 500);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("embedTexts: max retries exceeded");
+}
+
 /**
- * Embed texts one at a time (sequential) to stay within rate limits.
- * Prints progress to stdout.
+ * Embed texts in batches to reduce API round-trips. Batch size controlled by
+ * EMBED_BATCH_SIZE env var (default 16). Prints progress to stdout.
  */
 async function embedBatch(texts: string[]): Promise<number[][]> {
-  const results: number[][] = [];
-  for (let i = 0; i < texts.length; i++) {
-    results.push(await embedText(texts[i]));
-    if ((i + 1) % 10 === 0 || i + 1 === texts.length) {
-      process.stdout.write(`\r  Embedding: ${i + 1}/${texts.length}   `);
+  const batchSize = config.openai.embedBatchSize;
+  const results: number[][] = new Array(texts.length);
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const vecs = await embedTexts(batch);
+    for (let j = 0; j < vecs.length; j++) {
+      results[i + j] = vecs[j];
     }
+    const done = Math.min(i + batchSize, texts.length);
+    process.stdout.write(`\r  Embedding: ${done}/${texts.length}   `);
   }
   process.stdout.write("\n");
   return results;

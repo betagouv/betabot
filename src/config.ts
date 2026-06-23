@@ -14,6 +14,7 @@ export const config = {
     model: optional("OPENAI_MODEL", "qwen2.5:14b"),
     embedModel: optional("OPENAI_EMBED_MODEL", "nomic-embed-text"),
     embedDims: optionalInt("EMBED_DIMS", 768),
+    embedBatchSize: optionalInt("EMBED_BATCH_SIZE", 16),
     timeoutMs: optionalInt("OPENAI_TIMEOUT_MS", 30_000),
   },
   dataDir: optional("DATA_DIR", "./data"),

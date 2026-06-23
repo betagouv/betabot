@@ -12,6 +12,10 @@ function computeTextsHash(texts: string[]): string {
   return crypto.createHash("sha256").update(texts.join("\0")).digest("hex");
 }
 
+function sha256(text: string): string {
+  return crypto.createHash("sha256").update(text).digest("hex");
+}
+
 function loadSavedHash(binPath: string): string | null {
   try {
     return fs.readFileSync(binPath + ".hash", "utf-8").trim();
@@ -33,6 +37,77 @@ function needsRebuild(binPath: string, texts: string[]): boolean {
     return false;
   }
   return true;
+}
+
+// ─── Per-item embedding cache ────────────────────────────────────────────────
+
+const CACHE_BIN = path.join(DATA_DIR, "embeddings-cache.bin");
+const CACHE_IDX = path.join(DATA_DIR, "embeddings-cache.index.json");
+
+interface CacheIndex {
+  dims: number;
+  entries: Record<string, number>;
+}
+
+function loadEmbeddingCache(): Map<string, number[]> {
+  const cache = new Map<string, number[]>();
+  if (!fs.existsSync(CACHE_IDX) || !fs.existsSync(CACHE_BIN)) return cache;
+  try {
+    const { dims, entries } = JSON.parse(
+      fs.readFileSync(CACHE_IDX, "utf-8"),
+    ) as CacheIndex;
+    const buf = fs.readFileSync(CACHE_BIN);
+    const matrix = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+    for (const [hash, row] of Object.entries(entries)) {
+      cache.set(hash, Array.from(matrix.subarray(row * dims, (row + 1) * dims)));
+    }
+    console.log(`  cache: ${cache.size} entries loaded`);
+  } catch {
+    // corrupt cache — start fresh
+  }
+  return cache;
+}
+
+function saveEmbeddingCache(cache: Map<string, number[]>): void {
+  if (cache.size === 0) return;
+  const entries: Record<string, number> = {};
+  const allVecs: number[][] = [];
+  for (const [hash, vec] of cache.entries()) {
+    entries[hash] = allVecs.length;
+    allVecs.push(vec);
+  }
+  const dims = allVecs[0].length;
+  const buffer = Buffer.allocUnsafe(allVecs.length * dims * 4);
+  for (let i = 0; i < allVecs.length; i++) {
+    for (let j = 0; j < dims; j++) {
+      buffer.writeFloatLE(allVecs[i][j], (i * dims + j) * 4);
+    }
+  }
+  fs.writeFileSync(CACHE_BIN, buffer);
+  fs.writeFileSync(CACHE_IDX, JSON.stringify({ dims, entries }));
+}
+
+async function embedBatchCached(
+  texts: string[],
+  cache: Map<string, number[]>,
+): Promise<number[][]> {
+  const hashes = texts.map(sha256);
+  const toEmbed = texts
+    .map((t, i) => ({ i, t }))
+    .filter((x) => !cache.has(hashes[x.i]));
+
+  if (toEmbed.length < texts.length) {
+    process.stdout.write(
+      `  cache: ${texts.length - toEmbed.length}/${texts.length} hits\n`,
+    );
+  }
+
+  if (toEmbed.length > 0) {
+    const newVecs = await embedBatch(toEmbed.map((x) => x.t));
+    toEmbed.forEach((x, j) => cache.set(hashes[x.i], newVecs[j]));
+  }
+
+  return hashes.map((h) => cache.get(h)!);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -143,8 +218,8 @@ function writeJson(filePath: string, data: unknown): void {
 
 // ─── Job 1: Members ───────────────────────────────────────────────────────────
 
-async function buildMembersEmbeddings() {
-  console.log("\n[1/9] Building members embeddings…");
+async function buildMembersEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[1/11] Building members embeddings…");
   const members = readJson<MemberEntry[]>(
     path.join(DATA_DIR, "index/members.json"),
   );
@@ -160,7 +235,7 @@ async function buildMembersEmbeddings() {
   const binPath = path.join(DATA_DIR, "index/members.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -172,8 +247,8 @@ async function buildMembersEmbeddings() {
 
 // ─── Job 2: Startups index ───────────────────────────────────────────────────
 
-async function buildStartupsEmbeddings() {
-  console.log("\n[2/9] Building startups index embeddings…");
+async function buildStartupsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[2/11] Building startups index embeddings…");
   const startups = readJson<StartupEntry[]>(
     path.join(DATA_DIR, "index/startups.json"),
   );
@@ -183,7 +258,7 @@ async function buildStartupsEmbeddings() {
   const binPath = path.join(DATA_DIR, "index/startups.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -195,8 +270,8 @@ async function buildStartupsEmbeddings() {
 
 // ─── Job 3: Gitscan repos ────────────────────────────────────────────────────
 
-async function buildReposEmbeddings() {
-  console.log("\n[3/9] Building gitscan repos embeddings…");
+async function buildReposEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[3/11] Building gitscan repos embeddings…");
   const reposDir = path.join(DATA_DIR, "gitscan/repos");
   const entries: RepoEntry[] = [];
   const texts: string[] = [];
@@ -258,7 +333,7 @@ async function buildReposEmbeddings() {
   const binPath = path.join(DATA_DIR, "gitscan/repos.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -275,6 +350,7 @@ async function buildMdDocsEmbeddings(
   label: string,
   sourceDirs: string[],
   outDir: string,
+  cache: Map<string, number[]>,
   emptyMsg = "No doc files found",
 ): Promise<void> {
   const chunks: DocChunk[] = [];
@@ -343,7 +419,7 @@ async function buildMdDocsEmbeddings(
   const binPath = path.join(outDir, "docs.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -356,16 +432,16 @@ async function buildMdDocsEmbeddings(
 
 // ─── Job 4: Docs ─────────────────────────────────────────────────────────────
 
-async function buildDocsEmbeddings() {
-  console.log("\n[4/9] Building docs embeddings…");
+async function buildDocsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[4/11] Building docs embeddings…");
   const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
-  await buildMdDocsEmbeddings("doc", [docsDir], docsDir, "No doc files found");
+  await buildMdDocsEmbeddings("doc", [docsDir], docsDir, cache, "No doc files found");
 }
 
 // ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
 
-async function buildVideosEmbeddings() {
-  console.log("\n[5/9] Building PeerTube videos embeddings…");
+async function buildVideosEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[5/11] Building PeerTube videos embeddings…");
   const peertubeDir = path.join(DATA_DIR, "peertube");
 
   if (!fs.existsSync(peertubeDir)) {
@@ -413,7 +489,7 @@ async function buildVideosEmbeddings() {
   const binPath = path.join(peertubeDir, "videos.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -426,21 +502,22 @@ async function buildVideosEmbeddings() {
 
 // ─── Job 7: ProConnect docs ──────────────────────────────────────────────────
 
-async function buildProconnectDocsEmbeddings() {
-  console.log("\n[7/9] Building ProConnect docs embeddings…");
+async function buildProconnectDocsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[7/11] Building ProConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-proconnect");
   await buildMdDocsEmbeddings(
     "ProConnect",
     [dir],
     dir,
+    cache,
     "No ProConnect doc files found",
   );
 }
 
 // ─── Job 6: Incubators ───────────────────────────────────────────────────────
 
-async function buildIncubatorsEmbeddings() {
-  console.log("\n[6/9] Building incubators embeddings…");
+async function buildIncubatorsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[6/11] Building incubators embeddings…");
   const raw = readJson<Record<string, RawIncubator>>(
     path.join(DATA_DIR, "API/incubators.json"),
   );
@@ -475,7 +552,7 @@ async function buildIncubatorsEmbeddings() {
   const binPath = path.join(DATA_DIR, "API/incubators.embeddings.bin");
   if (!needsRebuild(binPath, texts)) return;
 
-  const vecs = await embedBatch(texts);
+  const vecs = await embedBatchCached(texts, cache);
   saveBin(vecs, binPath);
   saveHash(binPath, computeTextsHash(texts));
 
@@ -488,21 +565,22 @@ async function buildIncubatorsEmbeddings() {
 
 // ─── Job 8: FranceConnect docs ───────────────────────────────────────────────
 
-async function buildFranceconnectDocsEmbeddings() {
-  console.log("\n[8/9] Building FranceConnect docs embeddings…");
+async function buildFranceconnectDocsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[8/11] Building FranceConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-franceconnect");
   await buildMdDocsEmbeddings(
     "FranceConnect",
     [dir],
     dir,
+    cache,
     "No FranceConnect doc files found",
   );
 }
 
 // ─── Job 9: DSFR docs ────────────────────────────────────────────────────────
 
-async function buildDsfrDocsEmbeddings() {
-  console.log("\n[9/9] Building DSFR docs embeddings…");
+async function buildDsfrDocsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[9/11] Building DSFR docs embeddings…");
   const baseDir = path.join(DATA_DIR, "docs-dsfr");
   const subdirs = ["premiers-pas", "fondamentaux"].map((s) =>
     path.join(baseDir, s),
@@ -511,13 +589,14 @@ async function buildDsfrDocsEmbeddings() {
     "DSFR",
     subdirs,
     baseDir,
+    cache,
     "No DSFR doc files found",
   );
 }
 
 // ─── Job 10: WTTJ job offers ─────────────────────────────────────────────────
 
-async function buildWttjEmbeddings() {
+async function buildWttjEmbeddings(cache: Map<string, number[]>) {
   console.log("\n[10/11] Building WTTJ job offers embeddings…");
   const baseDir = path.join(DATA_DIR, "wttj");
   if (!fs.existsSync(baseDir)) {
@@ -538,19 +617,21 @@ async function buildWttjEmbeddings() {
     "WTTJ",
     orgDirs,
     baseDir,
+    cache,
     "No WTTJ job offers found",
   );
 }
 
 // ─── Job 11: Messagerie docs ─────────────────────────────────────────────────
 
-async function buildMessagerieDocsEmbeddings() {
+async function buildMessagerieDocsEmbeddings(cache: Map<string, number[]>) {
   console.log("\n[11/11] Building messagerie docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-messagerie");
   await buildMdDocsEmbeddings(
     "messagerie",
     [dir],
     dir,
+    cache,
     "No messagerie doc files found",
   );
 }
@@ -562,17 +643,22 @@ async function main() {
   console.log("===========================");
   const t0 = Date.now();
 
-  await buildMembersEmbeddings();
-  await buildStartupsEmbeddings();
-  await buildReposEmbeddings();
-  await buildDocsEmbeddings();
-  await buildVideosEmbeddings();
-  await buildIncubatorsEmbeddings();
-  await buildProconnectDocsEmbeddings();
-  await buildFranceconnectDocsEmbeddings();
-  await buildDsfrDocsEmbeddings();
-  await buildWttjEmbeddings();
-  await buildMessagerieDocsEmbeddings();
+  const cache = FORCE ? new Map<string, number[]>() : loadEmbeddingCache();
+
+  await buildMembersEmbeddings(cache);
+  await buildStartupsEmbeddings(cache);
+  await buildReposEmbeddings(cache);
+  await buildDocsEmbeddings(cache);
+  await buildVideosEmbeddings(cache);
+  await buildIncubatorsEmbeddings(cache);
+  await buildProconnectDocsEmbeddings(cache);
+  await buildFranceconnectDocsEmbeddings(cache);
+  await buildDsfrDocsEmbeddings(cache);
+  await buildWttjEmbeddings(cache);
+  await buildMessagerieDocsEmbeddings(cache);
+
+  saveEmbeddingCache(cache);
+  console.log(`  cache: ${cache.size} entries saved`);
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone in ${elapsed}s`);
