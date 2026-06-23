@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import ical from "ical";
-import { RRule } from "rrule";
+import rruleModule from "rrule";
+const { RRule } = rruleModule;
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
 

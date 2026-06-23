@@ -10,9 +10,14 @@ import { tools as docTools } from "../src/tools/docs.js";
 import { tools as proconnectDocTools } from "../src/tools/docs-proconnect.js";
 import { tools as franceconnectDocTools } from "../src/tools/docs-franceconnect.js";
 import { tools as dsfrDocTools } from "../src/tools/docs-dsfr.js";
-import { tools as pageTools } from "../src/tools/pages.js";
 import { tools as calendarTools } from "../src/tools/calendar.js";
 import { tools as videoTools } from "../src/tools/videos.js";
+import { tools as incubatorTools } from "../src/tools/incubators.js";
+import { tools as sqliteTools } from "../src/tools/sqlite.js";
+import { tools as wttjTools } from "../src/tools/wttj.js";
+import { tools as changelogStartupsTools } from "../src/tools/changelog-startups.js";
+import { tools as messagerieDocTools } from "../src/tools/docs-messagerie.js";
+import { SYSTEM_PROMPT } from "../src/prompt.js";
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
@@ -26,16 +31,14 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...proconnectDocTools,
   ...franceconnectDocTools,
   ...dsfrDocTools,
-  ...pageTools,
   ...calendarTools,
   ...videoTools,
+  ...incubatorTools,
+  ...sqliteTools,
+  ...wttjTools,
+  ...changelogStartupsTools,
+  ...messagerieDocTools,
 ];
-
-// Same prompt as orchestrator — divergence here is a signal something changed
-const SYSTEM_PROMPT = `Tu es l'assistant de la communauté beta.gouv.fr. Tu réponds en français.
-Tu as accès à des outils pour chercher des membres, des startups, des dépôts de code,
-de la documentation et des actualités. Utilise toujours les outils pour répondre
-aux questions factuelles. Ne devine pas les noms ou les données.`;
 
 // Minimal realistic canned responses — enough for the LLM to stop looping.
 // We test tool routing, not actual results quality.
@@ -61,9 +64,6 @@ const CANNED: Record<string, unknown> = {
   get_doc_proconnect_page: "Contenu de la page de documentation ProConnect.",
   get_doc_franceconnect_page: "Contenu de la page de documentation FranceConnect.",
   get_doc_dsfr_page: "Contenu de la page de documentation DSFR.",
-  search_pages: [
-    { path: "manifeste.md", title: "Manifeste beta.gouv.fr", breadcrumb: "Manifeste > Introduction", excerpt: "Nouvelle manière de concevoir l'action publique.", score: 0.9 },
-  ],
   search_repos: [
     { org: "betagouv", repo: "test", name: "test", description: "Repo de test.", score: 0.9 },
   ],
@@ -76,6 +76,22 @@ const CANNED: Record<string, unknown> = {
   get_page: "Contenu de la page institutionnelle.",
   get_calendar: [{ summary: "Réunion communauté beta.gouv.fr", start: new Date().toISOString() }],
   get_videos: [{ title: "Vidéo communauté", channel: "bluehats", url: "https://tube.numerique.gouv.fr/w/test" }],
+  search_incubators: [
+    { id: "dinum", name: "DINUM", short_desc: "Incubateur de services numériques de l'État.", score: 0.9 },
+  ],
+  get_incubator_detail: { id: "dinum", name: "DINUM", startups: [] },
+  search_wttj_jobs: [
+    { title: "Développeur fullstack", company: "beta.gouv.fr", url: "https://www.welcometothejungle.com/fr/jobs/test", score: 0.9 },
+  ],
+  get_wttj_job_page: "Contenu de l'offre d'emploi WelcomeKit.",
+  search_docs_messagerie: [
+    { path: "dmarc.md", title: "DMARC", breadcrumb: "Email > DNS", excerpt: "Configuration DMARC pour votre domaine.", score: 0.9 },
+  ],
+  get_doc_messagerie_page: "Contenu de la page de documentation messagerie.",
+  get_startup_updates: [{ startup_id: "test-startup", summary: "Mise à jour de test." }],
+  get_repo_changelog: "Changelog du dépôt de test.",
+  get_org_changelog: "Changelog de l'organisation betagouv.",
+  query_data: [{ result: 42 }],
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -85,6 +101,10 @@ interface Fixture {
   question: string;
   // All tools that must appear in the call log. Empty array = no tool expected.
   expect_tools: string[];
+  expect_first_tool?: string; // if set, the very first tool call must match this name
+  // Per-tool arg assertions (checked against the first call of that tool).
+  // String values use case-insensitive substring matching; others use strict equality.
+  expect_args?: Record<string, Record<string, unknown>>;
 }
 
 interface ToolCall {
@@ -109,6 +129,20 @@ interface RunResult {
   pass: number;
   total: number;
   cases: CaseResult[];
+}
+
+// ─── Arg matching ─────────────────────────────────────────────────────────────
+
+function argsMatch(actual: Record<string, unknown>, expected: Record<string, unknown>): boolean {
+  for (const [key, val] of Object.entries(expected)) {
+    const got = actual[key];
+    if (typeof val === "string" && typeof got === "string") {
+      if (!got.toLowerCase().includes(val.toLowerCase())) return false;
+    } else {
+      if (got !== val) return false;
+    }
+  }
+  return true;
 }
 
 // ─── Eval loop ────────────────────────────────────────────────────────────────
@@ -228,9 +262,26 @@ async function main() {
     const { tools, response } = await runCase(client, fixture.question);
     const toolNames = tools.map((t) => t.name);
     const firstTool = toolNames[0] ?? null;
-    const pass = fixture.expect_tools.length === 0
+    const toolsMatch = fixture.expect_tools.length === 0
       ? toolNames.length === 0
       : fixture.expect_tools.every((t) => toolNames.includes(t));
+    const firstToolMatch = fixture.expect_first_tool
+      ? firstTool === fixture.expect_first_tool
+      : true;
+    const argFailures: string[] = [];
+    if (fixture.expect_args) {
+      for (const [toolName, expectedArgs] of Object.entries(fixture.expect_args)) {
+        const call = tools.find((t) => t.name === toolName);
+        if (!call) {
+          argFailures.push(`${toolName}(not called)`);
+        } else if (!argsMatch(call.args, expectedArgs)) {
+          const got = JSON.stringify(call.args);
+          const exp = JSON.stringify(expectedArgs);
+          argFailures.push(`${toolName} args: expected ${exp} in ${got}`);
+        }
+      }
+    }
+    const pass = toolsMatch && firstToolMatch && argFailures.length === 0;
     if (pass) run.pass++;
 
     run.cases.push({
@@ -248,7 +299,9 @@ async function main() {
       console.log(`✓  ${gotLabel}`);
     } else {
       const exp = fixture.expect_tools.length ? `[${fixture.expect_tools.join(", ")}]` : "none";
-      console.log(`✗  expected=${exp}  got=${gotLabel}`);
+      const firstExp = fixture.expect_first_tool ? ` first=${fixture.expect_first_tool}` : "";
+      const argExp = argFailures.length ? `  args:${argFailures.join("; ")}` : "";
+      console.log(`✗  expected=${exp}${firstExp}  got=${gotLabel}${argExp}`);
     }
   }
 

@@ -134,6 +134,36 @@ for (const filePath of sample(walkMd(docsDir), N)) {
   }
 }
 
+// ─── Incubators ───────────────────────────────────────────────────────────────
+
+const incubatorsFile = path.join(DATA_DIR, "API/incubators.json");
+if (fs.existsSync(incubatorsFile)) {
+  const raw = JSON.parse(fs.readFileSync(incubatorsFile, "utf-8")) as Record<string, { title?: string; owner?: string }>;
+  const incubators = Object.entries(raw).map(([id, v]) => ({ id, title: v.title ?? id }));
+  for (const inc of sample(incubators, N)) {
+    add(
+      { id: `incubator-${slug(inc.id)}`, question: `que fait l'incubateur ${inc.title} ?`, expect_tools: ["search_incubators"] },
+      "incubators"
+    );
+  }
+} else {
+  console.warn(`⚠ ${incubatorsFile} not found — skipping incubator questions`);
+}
+
+// ─── Messagerie docs ──────────────────────────────────────────────────────────
+
+const messagerieDir = path.join(DATA_DIR, "docs-messagerie");
+for (const filePath of sample(walkMd(messagerieDir), N)) {
+  const { data: fm } = parseFrontmatter(fs.readFileSync(filePath, "utf-8"));
+  const title = (fm["title"] as string | undefined) ?? path.basename(filePath, ".md");
+  if (title.length > 3) {
+    add(
+      { id: `messagerie-${slug(title)}`, question: `comment ${title.toLowerCase()} selon la documentation messagerie ?`, expect_tools: ["search_docs_messagerie"] },
+      "messagerie"
+    );
+  }
+}
+
 // ─── Static (calendar, videos, no-tool) ──────────────────────────────────────
 
 const statics: Fixture[] = [
