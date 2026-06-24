@@ -17,10 +17,12 @@
     "eval:report": "node --import tsx evals/report.ts",
     "eval:trend": "node --import tsx evals/trend.ts",
     "get-data": "sh get-data.sh",
+    "affinate": "node --env-file=.env --import tsx affinate.ts",
     "get-device-id": "node --env-file=.env --import tsx src/get-device-id.ts",
     "test": "tsc && node --test 'dist/src/__tests__/**/*.test.js'"
   },
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "@mozilla/readability": "^0.6.0",
     "crawlee": "^3.16.0",
     "esbuild-wasm": "^0.28.0",

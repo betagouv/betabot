@@ -160,6 +160,7 @@ export class Orchestrator {
     roomId: string;
     threadId?: string;
     text: string;
+    onToolCall?: (name: string, args: Record<string, unknown>) => void;
   }): Promise<string> {
     const key = this.getConversationKey(input.roomId, input.threadId);
     const history = this.getHistory(key);
@@ -297,6 +298,7 @@ export class Orchestrator {
                   string,
                   unknown
                 >;
+                input.onToolCall?.(tc.function.name, args);
                 result = await handler(args);
                 const resultStr = JSON.stringify(result);
                 debug(
