@@ -636,6 +636,20 @@ async function buildMessagerieDocsEmbeddings(cache: Map<string, number[]>) {
   );
 }
 
+// ─── Job 12: Tchap docs ──────────────────────────────────────────────────────
+
+async function buildTchapDocsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[12/12] Building Tchap docs embeddings…");
+  const dir = path.join(DATA_DIR, "docs-tchap");
+  await buildMdDocsEmbeddings(
+    "Tchap",
+    [dir],
+    dir,
+    cache,
+    "No Tchap doc files found",
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -656,6 +670,7 @@ async function main() {
   await buildDsfrDocsEmbeddings(cache);
   await buildWttjEmbeddings(cache);
   await buildMessagerieDocsEmbeddings(cache);
+  await buildTchapDocsEmbeddings(cache);
 
   saveEmbeddingCache(cache);
   console.log(`  cache: ${cache.size} entries saved`);

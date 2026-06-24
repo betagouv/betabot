@@ -30,6 +30,7 @@ npx tsx fetch-docs.ts https://partenaires.proconnect.gouv.fr/docs "$DATA_DIR/doc
 npx tsx fetch-docs.ts https://docs.partenaires.franceconnect.gouv.fr "$DATA_DIR/docs-franceconnect"
 npx tsx fetch-docs.ts https://www.systeme-de-design.gouv.fr/version-courante/fr/premiers-pas "$DATA_DIR/docs-dsfr/premiers-pas"
 npx tsx fetch-docs.ts https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux "$DATA_DIR/docs-dsfr/fondamentaux"
+npx tsx fetch-docs.ts https://aide.tchap.numerique.gouv.fr/fr/ "$DATA_DIR/docs-tchap"
 
 mkdir -p "$DATA_DIR/docs-messagerie"
 npx tsx fetch-messagerie-docs.ts

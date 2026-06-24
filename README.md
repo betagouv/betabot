@@ -1,6 +1,6 @@
 # betabot
 
-Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), email management documentation from docs.numerique.gouv.fr, and job offers from WelcomeKit (WTTJ).
+Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), Tchap (messagerie sécurisée de l'État), email management documentation from docs.numerique.gouv.fr, and job offers from WelcomeKit (WTTJ).
 
 Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls. Public data only.
 
@@ -22,6 +22,8 @@ Detailed specs : [./specs](./specs)
 - _Comment utiliser les boutons du DSFR ?_
 - _Comment configurer DKIM et DMARC pour mon domaine ?_
 - _Comment accéder à la messagerie numerique.gouv.fr ?_
+- _Comment créer un salon sur Tchap ?_
+- _Est-ce que Tchap chiffre les messages de bout en bout ?_
 - _Quelles offres d'emploi sont disponibles sur WelcomeKit ?_
 - _Y a-t-il des postes de développeur en télétravail ?_
 
@@ -52,6 +54,7 @@ Tool dispatcher
   ├── search_docs_franceconnect / get_doc_franceconnect_page
   ├── search_docs_dsfr / get_doc_dsfr_page
   ├── search_docs_messagerie / get_doc_messagerie_page
+  ├── search_docs_tchap / get_doc_tchap_page
   ├── search_wttj_jobs / get_wttj_job_page
   ├── get_startup_updates
   ├── get_calendar
@@ -124,6 +127,7 @@ Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee]
 | FranceConnect               | `https://docs.partenaires.franceconnect.gouv.fr`       | `data/docs-franceconnect/`     |
 | DSFR (premiers pas)         | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
 | DSFR (fondamentaux)         | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
+| Tchap                       | `https://aide.tchap.numerique.gouv.fr/fr/`             | `data/docs-tchap/`             |
 
 The email management documentation uses `fetch-messagerie-docs.ts` — fetches 11 documents from the `docs.numerique.gouv.fr` REST API (`/formatted-content/?content_format=markdown`), reads `title` and `content` from the JSON response, and writes one markdown file per document with YAML frontmatter.
 
@@ -155,7 +159,7 @@ npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
 npm run embed
 ```
 
-Embeds chunks across 11 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
+Embeds chunks across 12 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
 
 ```sh
 npm run embed -- --force
