@@ -15,10 +15,13 @@ class Orchestrator {
     roomId: string;
     threadId?: string;
     text: string;
+    onToolCall?: (name: string, args: Record<string, unknown>) => void;
   }): Promise<string>;
   clearHistory(roomId: string, threadId?: string): void;
 }
 ```
+
+`onToolCall` — optional callback invoked after each tool's arguments are parsed but before the handler executes. Used by `affinate`'s live-query mode to capture tool calls in order.
 
 Conversation key: `"${roomId}:${threadId ?? 'root'}"` — distinct per Matrix thread or DM.
 

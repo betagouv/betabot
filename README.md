@@ -195,6 +195,25 @@ Run nightly or on demand:
 
 ---
 
+## Dataset affination (human-in-the-loop)
+
+Interactive TUI to review eval failures, fix fixture expectations, add new examples, and track quality trends:
+
+```sh
+npm run affinate
+```
+
+Screens:
+- **Dashboard** — pass-rate sparkline over all runs + per-tool failure breakdown
+- **Review Queue** — step through failures; fix expected tools, mark as model error, annotate, delete
+- **Live Query** — run a question against the model (canned or real tools), save result as new fixture
+- **Fixture Browser** — search/filter all fixtures with pass/fail status from last run
+- **Run Eval** — trigger a new eval run and stream progress inline
+
+See [specs/affinate.md](./specs/affinate.md) for architecture details.
+
+---
+
 ## Evals
 
 Test tool routing — which tool(s) the LLM calls for a given question — against a fixture set.
@@ -256,4 +275,3 @@ npm run start
 ## Todo
 
 - data: formations
--
