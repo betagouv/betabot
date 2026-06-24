@@ -52,6 +52,10 @@ import {
   tools as messagerieDocTools,
   handlers as messagerieDocHandlers,
 } from "./tools/docs-messagerie.js";
+import {
+  tools as tchapDocTools,
+  handlers as tchapDocHandlers,
+} from "./tools/docs-tchap.js";
 import { detectEntities, type DetectedEntities } from "./entity-detector.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
 
@@ -98,6 +102,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...wttjTools,
   ...changelogStartupsTools,
   ...messagerieDocTools,
+  ...tchapDocTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -118,6 +123,7 @@ const ALL_HANDLERS: Record<
   ...wttjHandlers,
   ...changelogStartupsHandlers,
   ...messagerieDocHandlers,
+  ...tchapDocHandlers,
 };
 
 export class Orchestrator {

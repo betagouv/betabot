@@ -352,5 +352,23 @@
     "question": "comment configurer les enregistrements MX pour recevoir des emails ?",
     "expect_tools": ["search_docs_messagerie"],
     "expect_args": { "search_docs_messagerie": { "query": "mx" } }
+  },
+  {
+    "id": "tchap-creer-salon",
+    "question": "Comment créer un salon sur Tchap ?",
+    "expect_tools": ["search_docs_tchap"],
+    "expect_first_tool": "search_docs_tchap"
+  },
+  {
+    "id": "tchap-chiffrement",
+    "question": "Est-ce que Tchap chiffre les messages de bout en bout ?",
+    "expect_tools": ["search_docs_tchap"],
+    "expect_first_tool": "search_docs_tchap"
+  },
+  {
+    "id": "tchap-compte",
+    "question": "Comment créer un compte Tchap ?",
+    "expect_tools": ["search_docs_tchap"],
+    "expect_first_tool": "search_docs_tchap"
   }
 ]
