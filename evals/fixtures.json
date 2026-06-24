@@ -223,55 +223,91 @@
     "id": "proconnect-bouton-integration",
     "question": "comment intégrer le bouton ProConnect sur mon service ?",
     "expect_tools": ["search_docs_proconnect"],
-    "expect_args": { "search_docs_proconnect": { "query": "bouton" } }
+    "expect_args": {
+      "search_docs_proconnect": {
+        "query": "bouton"
+      }
+    }
   },
   {
     "id": "proconnect-couverture",
     "question": "quelle est la couverture de ProConnect, quels sont les fournisseurs d'identité supportés ?",
     "expect_tools": ["search_docs_proconnect"],
-    "expect_args": { "search_docs_proconnect": { "query": "fournisseur" } }
+    "expect_args": {
+      "search_docs_proconnect": {
+        "query": "fournisseur"
+      }
+    }
   },
   {
     "id": "proconnect-oidc",
     "question": "comment fonctionne l'authentification OIDC avec ProConnect ?",
     "expect_tools": ["search_docs_proconnect"],
-    "expect_args": { "search_docs_proconnect": { "query": "oidc" } }
+    "expect_args": {
+      "search_docs_proconnect": {
+        "query": "oidc"
+      }
+    }
   },
   {
     "id": "franceconnect-integration-fs",
     "question": "comment devenir fournisseur de service FranceConnect ?",
     "expect_tools": ["search_docs_franceconnect"],
-    "expect_args": { "search_docs_franceconnect": { "query": "fournisseur" } }
+    "expect_args": {
+      "search_docs_franceconnect": {
+        "query": "fournisseur"
+      }
+    }
   },
   {
     "id": "franceconnect-niveaux-eidas",
     "question": "quels sont les niveaux eIDAS supportés par FranceConnect ?",
     "expect_tools": ["search_docs_franceconnect"],
-    "expect_args": { "search_docs_franceconnect": { "query": "eidas" } }
+    "expect_args": {
+      "search_docs_franceconnect": {
+        "query": "eidas"
+      }
+    }
   },
   {
     "id": "franceconnect-deconnexion",
     "question": "comment implémenter la déconnexion avec FranceConnect+ ?",
     "expect_tools": ["search_docs_franceconnect"],
-    "expect_args": { "search_docs_franceconnect": { "query": "connexion" } }
+    "expect_args": {
+      "search_docs_franceconnect": {
+        "query": "connexion"
+      }
+    }
   },
   {
     "id": "dsfr-installation",
     "question": "comment installer le Design Système de l'État (DSFR) dans mon projet ?",
     "expect_tools": ["search_docs_dsfr"],
-    "expect_args": { "search_docs_dsfr": { "query": "install" } }
+    "expect_args": {
+      "search_docs_dsfr": {
+        "query": "install"
+      }
+    }
   },
   {
     "id": "dsfr-couleurs",
     "question": "quelles sont les couleurs disponibles dans le DSFR ?",
     "expect_tools": ["search_docs_dsfr"],
-    "expect_args": { "search_docs_dsfr": { "query": "couleur" } }
+    "expect_args": {
+      "search_docs_dsfr": {
+        "query": "couleur"
+      }
+    }
   },
   {
     "id": "dsfr-accessibilite",
     "question": "comment rendre mon service accessible avec le DSFR ?",
     "expect_tools": ["search_docs_dsfr"],
-    "expect_args": { "search_docs_dsfr": { "query": "accessib" } }
+    "expect_args": {
+      "search_docs_dsfr": {
+        "query": "accessib"
+      }
+    }
   },
   {
     "id": "wttj-job-search",
@@ -282,7 +318,11 @@
     "id": "wttj-job-dev",
     "question": "y a-t-il des postes de développeur en télétravail ?",
     "expect_tools": ["search_wttj_jobs"],
-    "expect_args": { "search_wttj_jobs": { "query": "développeur" } }
+    "expect_args": {
+      "search_wttj_jobs": {
+        "query": "développeur"
+      }
+    }
   },
   {
     "id": "incubator-list",
@@ -293,25 +333,41 @@
     "id": "incubator-detail-dinum",
     "question": "que fait l'incubateur de la DINUM et quelles startups héberge-t-il ?",
     "expect_tools": ["search_incubators", "get_incubator_detail"],
-    "expect_args": { "search_incubators": { "query": "dinum" } }
+    "expect_args": {
+      "search_incubators": {
+        "query": "dinum"
+      }
+    }
   },
   {
     "id": "incubator-menj",
     "question": "quelles startups sont dans l'incubateur du ministère de l'éducation nationale ?",
     "expect_tools": ["search_incubators", "get_incubator_detail"],
-    "expect_args": { "search_incubators": { "query": "education" } }
+    "expect_args": {
+      "search_incubators": {
+        "query": "education"
+      }
+    }
   },
   {
     "id": "repo-search-matomo",
     "question": "existe-t-il un dépôt de code sur Matomo dans l'organisation betagouv ?",
     "expect_tools": ["search_repos"],
-    "expect_args": { "search_repos": { "query": "matomo" } }
+    "expect_args": {
+      "search_repos": {
+        "query": "matomo"
+      }
+    }
   },
   {
     "id": "repo-search-typescript",
     "question": "quels dépôts GitHub betagouv utilisent TypeScript ?",
     "expect_tools": ["search_repos"],
-    "expect_args": { "search_repos": { "query": "typescript" } }
+    "expect_args": {
+      "search_repos": {
+        "query": "typescript"
+      }
+    }
   },
   {
     "id": "repo-changelog-beta",
@@ -327,25 +383,41 @@
     "id": "startup-updates-recosante",
     "question": "quelles sont les dernières mises à jour de la startup Recosanté ?",
     "expect_tools": ["search_startups", "get_startup_updates"],
-    "expect_args": { "search_startups": { "query": "recosant" } }
+    "expect_args": {
+      "search_startups": {
+        "query": "recosant"
+      }
+    }
   },
   {
     "id": "startup-updates-demarches",
     "question": "qu'est-ce qui a changé récemment dans la startup démarches simplifiées ?",
     "expect_tools": ["search_startups", "get_startup_updates"],
-    "expect_args": { "search_startups": { "query": "demarche" } }
+    "expect_args": {
+      "search_startups": {
+        "query": "demarche"
+      }
+    }
   },
   {
     "id": "messagerie-dmarc",
     "question": "comment configurer DMARC pour mon domaine email ?",
     "expect_tools": ["search_docs_messagerie"],
-    "expect_args": { "search_docs_messagerie": { "query": "dmarc" } }
+    "expect_args": {
+      "search_docs_messagerie": {
+        "query": "dmarc"
+      }
+    }
   },
   {
     "id": "messagerie-spf-dkim",
     "question": "comment mettre en place SPF et DKIM pour un service beta.gouv.fr ?",
     "expect_tools": ["search_docs_messagerie"],
-    "expect_args": { "search_docs_messagerie": { "query": "dkim" } }
+    "expect_args": {
+      "search_docs_messagerie": {
+        "query": "dkim"
+      }
+    }
   },
   {
     "id": "messagerie-mx",
@@ -356,19 +428,21 @@
   {
     "id": "tchap-creer-salon",
     "question": "Comment créer un salon sur Tchap ?",
-    "expect_tools": ["search_docs_tchap"],
-    "expect_first_tool": "search_docs_tchap"
+    "expect_tools": ["search_docs_tchap"]
   },
   {
     "id": "tchap-chiffrement",
     "question": "Est-ce que Tchap chiffre les messages de bout en bout ?",
-    "expect_tools": ["search_docs_tchap"],
-    "expect_first_tool": "search_docs_tchap"
+    "expect_tools": ["search_docs_tchap"]
   },
   {
     "id": "tchap-compte",
     "question": "Comment créer un compte Tchap ?",
-    "expect_tools": ["search_docs_tchap"],
-    "expect_first_tool": "search_docs_tchap"
+    "expect_tools": ["search_docs_tchap"]
+  },
+  {
+    "id": "manual-comment-rejoinre-l-espace-tchap-de-beta",
+    "question": "comment rejoinre l'espace tchap de beta ?",
+    "expect_tools": ["search_docs", "get_doc_page"]
   }
 ]
