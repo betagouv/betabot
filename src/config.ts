@@ -19,6 +19,7 @@ export const config = {
   },
   dataDir: optional("DATA_DIR", "./data"),
   calendarIcsUrl: optional("CALENDAR_ICS_URL", ""),
+  feedbackWebhookUrl: optional("FEEDBACK_WEBHOOK_URL", ""),
   matrix: {
     homeserver: process.env["MATRIX_HOMESERVER"],
     user: process.env["MATRIX_USER"],

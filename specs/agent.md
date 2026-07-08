@@ -72,10 +72,32 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 | `tools/docs-messagerie.ts`   | `search_docs_messagerie`, `get_doc_messagerie_page`            |
 | `tools/wttj.ts`              | `search_wttj_jobs`, `get_wttj_job_page`                        |
 | `tools/changelog-startups.ts`| `get_startup_updates`                                          |
+| `tools/feedback.ts`          | `submit_feedback`                                              |
 
-Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args) => Promise<unknown>>`.
+Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args, context) => Promise<unknown>>`.
+The `context: ToolContext` second argument (`{ conversation: { role, content }[] }`) carries the current conversation's
+`history` (user + assistant turns) as of the tool call — most handlers ignore it; only `submit_feedback` uses it.
 
 Doc-based tools (`docs-*.ts`, `wttj.ts`) are built with the `makeDocsTool()` factory from `tools/docs-base.ts`, which handles lazy-loading of `.embeddings.bin`, `.bm25.json`, and `.index.json` on first use.
+
+## Feedback tool (`tools/feedback.ts`)
+
+`submit_feedback(feedback)` is called by the LLM when a user explicitly reacts to a bot response or to the conversation
+(positive or negative). The system prompt instructs the LLM to call it only on evaluative feedback (not plain politeness)
+and to thank the user afterwards in its own reply — there is no separate "thanks" code path.
+
+The handler POSTs to `config.feedbackWebhookUrl` (env `FEEDBACK_WEBHOOK_URL`, an n8n webhook):
+
+```json
+{
+  "query": "first user message in the conversation",
+  "feedback": "the user's feedback, reformulated by the LLM",
+  "conversation": [{ "role": "user | assistant", "content": "..." }]
+}
+```
+
+If `FEEDBACK_WEBHOOK_URL` is unset, or the webhook call fails/returns non-2xx, the handler logs and returns
+`{ ok: false, error }` instead of throwing — a missing webhook must never break the conversation.
 
 ## Debug output
 
@@ -84,3 +106,4 @@ All debug lines go to `stderr` prefixed `[debug]`. Includes per-iteration messag
 ## Config used
 
 `config.openai.baseUrl`, `config.openai.apiKey`, `config.openai.model` (from `src/config.ts`).
+`config.feedbackWebhookUrl` is used by `tools/feedback.ts` only.
