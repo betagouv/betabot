@@ -8,9 +8,46 @@ import { config } from "../config.js";
 // rrule CJS interop differs across environments: v2 exports named, some builds export the class directly
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const RRule: typeof import("rrule").RRule | undefined =
-  (rruleModule as any).RRule ?? (rruleModule as any).default?.RRule ?? undefined;
+  (rruleModule as any).RRule ??
+  (rruleModule as any).default?.RRule ??
+  undefined;
 
 const DATA = config.dataDir;
+
+// Renders a Date as an ISO-8601 string with the Europe/Paris local time and
+// offset, so consumers of this tool never have to reason about UTC.
+function toParisISOString(date: Date): string {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = Object.fromEntries(
+    dtf.formatToParts(date).map((p) => [p.type, p.value]),
+  );
+  const localDate = `${parts.year}-${parts.month}-${parts.day}`;
+  const localTime = `${parts.hour}:${parts.minute}:${parts.second}`;
+
+  const offsetName =
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Paris",
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(date)
+      .find((p) => p.type === "timeZoneName")?.value ?? "GMT+2";
+
+  const [, sign, h, m] = offsetName.match(/GMT([+-])(\d+)(?::(\d+))?/) ?? [];
+  const offset = sign
+    ? `${sign}${h!.padStart(2, "0")}:${(m ?? "00").padStart(2, "0")}`
+    : "+02:00";
+
+  return `${localDate}T${localTime}${offset}`;
+}
 
 interface CalendarEvent {
   summary: string;
@@ -64,16 +101,16 @@ async function get_calendar(
       for (const occ of rule.between(from, to, true)) {
         events.push({
           ...baseFields,
-          start: occ.toISOString(),
-          end: new Date(occ.getTime() + duration).toISOString(),
+          start: toParisISOString(occ),
+          end: toParisISOString(new Date(occ.getTime() + duration)),
         });
       }
     } else if (!component.rrule) {
       if (start < from || start > to) continue;
       events.push({
         ...baseFields,
-        start: start.toISOString(),
-        end: end?.toISOString() ?? start.toISOString(),
+        start: toParisISOString(start),
+        end: toParisISOString(end ?? start),
       });
     }
   }
@@ -93,7 +130,7 @@ const getCalendarTool: ChatCompletionTool = {
   function: {
     name: "get_calendar",
     description:
-      "Retourne les événements du calendrier de la communauté beta.gouv.fr, à venir ou passés.",
+      "Retourne les événements du calendrier de la communauté beta.gouv.fr, à venir ou passés. Les heures de début et de fin sont exprimées à l'heure de Paris (Europe/Paris).",
     parameters: {
       type: "object",
       properties: {
