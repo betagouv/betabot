@@ -61,6 +61,9 @@ npx tsx src/parse-startup-changelog.ts "$DATA_DIR/startups-changelog.html" "$DAT
 # welcome to the jungle offers
 npx tsx fetch-wttj.ts
 
+# choisir le service public offers
+npx tsx fetch-choisirleservicepublic.ts
+
 mkdir -p "$DATA_DIR/index"
 
 # active members index

@@ -325,6 +325,21 @@
     }
   },
   {
+    "id": "choisirleservicepublic-job-search",
+    "question": "quelles offres d'emploi sont disponibles sur Choisir le service public ?",
+    "expect_tools": ["search_choisirleservicepublic_jobs"]
+  },
+  {
+    "id": "choisirleservicepublic-job-technicien",
+    "question": "y a-t-il des offres de technicien de laboratoire dans la fonction publique ?",
+    "expect_tools": ["search_choisirleservicepublic_jobs"],
+    "expect_args": {
+      "search_choisirleservicepublic_jobs": {
+        "query": "technicien laboratoire"
+      }
+    }
+  },
+  {
     "id": "incubator-list",
     "question": "quels sont les incubateurs membres du réseau beta.gouv.fr ?",
     "expect_tools": ["search_incubators"]

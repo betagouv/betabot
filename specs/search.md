@@ -106,7 +106,9 @@ Sources and their index locations:
 | FranceConnect docs   | `data/docs-franceconnect/docs`      | `data/docs-franceconnect/docs.index.json`      |
 | DSFR docs            | `data/docs-dsfr/docs`               | `data/docs-dsfr/docs.index.json`               |
 | WTTJ job offers      | `data/wttj/docs`                    | `data/wttj/docs.index.json`                    |
+| Choisir le service public jobs | `data/choisirleservicepublic/jobs` | `data/choisirleservicepublic/jobs.index.json` |
 | Messagerie docs      | `data/docs-messagerie/docs`         | `data/docs-messagerie/docs.index.json`         |
+| Tchap docs           | `data/docs-tchap/docs`              | `data/docs-tchap/docs.index.json`              |
 
 ---
 
