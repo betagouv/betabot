@@ -1,6 +1,6 @@
 # betabot
 
-Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), Tchap (messagerie sécurisée de l'État), email management documentation from docs.numerique.gouv.fr, and job offers from WelcomeKit (WTTJ).
+Self-hosted conversational bot that answers natural language questions (in French) about the [beta.gouv.fr](https://beta.gouv.fr) community — members, startups, code repositories, documentation, calendar, videos, web-crawled documentation for ProConnect, FranceConnect, the Design Système de l'État (DSFR), Tchap (messagerie sécurisée de l'État), email management documentation from docs.numerique.gouv.fr, job offers from WelcomeKit (WTTJ), and public-service job offers from Choisir le service public.
 
 Runs fully on a private [Ollama](https://ollama.com) instance. No external API calls. Public data only.
 
@@ -26,6 +26,7 @@ Detailed specs : [./specs](./specs)
 - _Est-ce que Tchap chiffre les messages de bout en bout ?_
 - _Quelles offres d'emploi sont disponibles sur WelcomeKit ?_
 - _Y a-t-il des postes de développeur en télétravail ?_
+- _Quelles offres d'emploi de la fonction publique sont disponibles sur Choisir le service public ?_
 
 ---
 

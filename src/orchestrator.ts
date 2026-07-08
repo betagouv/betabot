@@ -45,6 +45,10 @@ import {
 } from "./tools/docs-dsfr.js";
 import { tools as wttjTools, handlers as wttjHandlers } from "./tools/wttj.js";
 import {
+  tools as choisirleservicepublicTools,
+  handlers as choisirleservicepublicHandlers,
+} from "./tools/choisirleservicepublic.js";
+import {
   tools as changelogStartupsTools,
   handlers as changelogStartupsHandlers,
 } from "./tools/changelog-startups.js";
@@ -105,6 +109,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...franceconnectDocTools,
   ...dsfrDocTools,
   ...wttjTools,
+  ...choisirleservicepublicTools,
   ...changelogStartupsTools,
   ...messagerieDocTools,
   ...tchapDocTools,
@@ -127,6 +132,7 @@ const ALL_HANDLERS: Record<
   ...franceconnectDocHandlers,
   ...dsfrDocHandlers,
   ...wttjHandlers,
+  ...choisirleservicepublicHandlers,
   ...changelogStartupsHandlers,
   ...messagerieDocHandlers,
   ...tchapDocHandlers,

@@ -70,7 +70,9 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 | `tools/docs-franceconnect.ts`| `search_docs_franceconnect`, `get_doc_franceconnect_page`      |
 | `tools/docs-dsfr.ts`         | `search_docs_dsfr`, `get_doc_dsfr_page`                        |
 | `tools/docs-messagerie.ts`   | `search_docs_messagerie`, `get_doc_messagerie_page`            |
+| `tools/docs-tchap.ts`        | `search_docs_tchap`, `get_doc_tchap_page`                      |
 | `tools/wttj.ts`              | `search_wttj_jobs`, `get_wttj_job_page`                        |
+| `tools/choisirleservicepublic.ts` | `search_choisirleservicepublic_jobs`, `get_choisirleservicepublic_job_detail` |
 | `tools/changelog-startups.ts`| `get_startup_updates`                                          |
 | `tools/feedback.ts`          | `submit_feedback`                                              |
 

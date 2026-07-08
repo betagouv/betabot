@@ -84,6 +84,30 @@ Each file has YAML frontmatter (`title`, `organization`, `location`, `contract`,
 
 Existing `.md` files in each org directory are removed before rewriting so deleted offers are pruned.
 
+### Choisir le service public job offers (fetch-choisirleservicepublic.ts)
+
+TypeScript script that fetches public-service job offers as RSS from the Talentsoft-powered `place-ep-recrute.talent-soft.com` feed used by [choisirleservicepublic.gouv.fr](https://choisirleservicepublic.gouv.fr). Requires one env var:
+
+| Env var                       | Description                                          |
+| ------------------------------ | ----------------------------------------------------- |
+| `CHOISIRLESERVICEPUBLIC_IDS`  | Comma-separated list of `Rss_Entity` ids, e.g. `1,2,3` |
+
+If unset, the script logs a message and exits without writing anything.
+
+For each `Rss_Entity` id, calls:
+
+```
+GET https://place-ep-recrute.talent-soft.com/handlers/offerRss.ashx?LCID=1036&Rss_Entity={id}
+```
+
+The response is an RSS 2.0 XML feed, parsed with `jsdom` (`text/xml` mode). The feed's `<channel><title>` (e.g. `"Export RSS des offres - Seulement les offres à la une : Non / Organisme de rattachement : Ministère de la Culture"`) carries the organisme as the trailing part after `Organisme de rattachement :`; extracted once per feed and attached to every item as `organisme` (`""` when the channel title has no such suffix). Each `<item>` is converted to a plain object (`title`, `link`, `description` — raw HTML, `categories` — array from repeated `<category>` tags, `pubDate`, `organisme`) and the full array is written as JSON to:
+
+```
+data/choisirleservicepublic/{Rss_Entity}.json
+```
+
+Each run overwrites the file for that `Rss_Entity` with the current feed contents.
+
 ### PeerTube feeds (curl)
 
 All channels from `tube.numerique.gouv.fr`, sorted by `-createdAt`:
@@ -126,7 +150,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Eleven sequential jobs. Each job:
+Thirteen sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -291,7 +315,28 @@ Outputs: `data/wttj/docs.embeddings.bin`, `data/wttj/docs.bm25.json`, `data/wttj
 
 Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt }` with `path` relative to `data/wttj/` (e.g., `ci7AvS/senior-backend-engineer-abc123.md`).
 
-### Job 11 — Messagerie docs
+### Job 11 — Choisir le service public job offers
+
+Source: all `*.json` files under `data/choisirleservicepublic/` (one per `Rss_Entity`, written by `fetch-choisirleservicepublic.ts`), except `jobs.index.json`. Skipped entirely if directory does not exist or no items are found.
+
+Embedding text per job: `"{title}\n{organisme}\n{categories joined by ', '}\n{description}"` — `description` is `description` (raw HTML from the RSS item) stripped of HTML tags and truncated to 6000 chars.
+
+Outputs: `data/choisirleservicepublic/jobs.embeddings.bin`, `data/choisirleservicepublic/jobs.bm25.json`, `data/choisirleservicepublic/jobs.index.json`
+
+Index entry type:
+
+```ts
+{
+  title: string;
+  link: string;
+  categories: string[];
+  pubDate: string;
+  organisme: string; // extracted from the RSS channel title, "" if none
+  excerpt: string; // stripped description, truncated to 200 chars
+}
+```
+
+### Job 12 — Messagerie docs
 
 Source: all `.md` files under `data/docs-messagerie/` (written by `fetch-messagerie-docs.ts`). Skipped entirely if directory does not exist.
 
@@ -300,6 +345,16 @@ Same chunking and embedding strategy as Job 4: front matter intro chunk (from `d
 Outputs: `data/docs-messagerie/docs.embeddings.bin`, `data/docs-messagerie/docs.bm25.json`, `data/docs-messagerie/docs.index.json`
 
 Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt, url }` with `url` pointing to `https://docs.numerique.gouv.fr/docs/{id}/`.
+
+### Job 13 — Tchap docs
+
+Source: all `.md` files under `data/docs-tchap/` (written by `fetch-docs.ts`). Skipped entirely if directory does not exist.
+
+Same chunking and embedding strategy as Job 4: front matter intro chunk (from `description` if present) and section chunks from `extractSections`.
+
+Outputs: `data/docs-tchap/docs.embeddings.bin`, `data/docs-tchap/docs.bm25.json`, `data/docs-tchap/docs.index.json`
+
+Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt, url? }`).
 
 ---
 
