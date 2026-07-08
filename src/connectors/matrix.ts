@@ -199,7 +199,10 @@ Je peux t'aider à :
 - 🏢 **Découvrir les incubateurs**
 - 💡 **Consultez les offres d'emploi** et missions
 
-Pose-moi une question ou mentionne-moi dans un salon !`;
+Pose-moi une question ou mentionne-moi dans un salon !
+
+Tes feedbacks sont précieux pour m'améliorer alors n'hésite pas :)
+`;
 
 // ─── Verification state ───────────────────────────────────────────────────────
 
@@ -716,11 +719,9 @@ export class MatrixConnector {
         text: text || body,
       })
       .then(async (response) => {
-        const base =
-          response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
         const replyText =
-          base +
-          "\n\n---\n*[Partager un retour](https://github.com/betagouv/betabot/issues/new)*";
+          response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
+
         await this.sendMessage(roomId, replyText, userEventId, threadRoot);
       })
       .catch(async (err: unknown) => {

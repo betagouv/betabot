@@ -72,10 +72,39 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 | `tools/docs-messagerie.ts`   | `search_docs_messagerie`, `get_doc_messagerie_page`            |
 | `tools/wttj.ts`              | `search_wttj_jobs`, `get_wttj_job_page`                        |
 | `tools/changelog-startups.ts`| `get_startup_updates`                                          |
+| `tools/feedback.ts`          | `submit_feedback`                                              |
 
-Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args) => Promise<unknown>>`.
+Each tool module exports `tools: ChatCompletionTool[]` (JSON schema definitions) and `handlers: Record<string, (args, context) => Promise<unknown>>`.
+The `context: ToolContext` second argument (`{ userId, conversation: { role, content }[] }`) carries the Matrix user ID
+and the current conversation's `history` (user + assistant turns) as of the tool call — most handlers ignore it; only
+`submit_feedback` uses it.
 
 Doc-based tools (`docs-*.ts`, `wttj.ts`) are built with the `makeDocsTool()` factory from `tools/docs-base.ts`, which handles lazy-loading of `.embeddings.bin`, `.bm25.json`, and `.index.json` on first use.
+
+## Feedback tool (`tools/feedback.ts`)
+
+`submit_feedback(feedback, positive)` is called by the LLM when a user explicitly reacts to a bot response or to the
+conversation (positive or negative). `positive` is a required boolean the LLM sets to classify the feedback. The system
+prompt instructs the LLM to call it only on evaluative feedback (not plain politeness), to reply with empathy —
+acknowledging the sentiment, apologizing if the feedback is negative — and to mention that the team may follow up.
+
+The handler POSTs to `config.feedbackWebhookUrl` (env `FEEDBACK_WEBHOOK_URL`, an n8n webhook):
+
+```json
+{
+  "query": "first user message in the conversation",
+  "feedback": "the user's feedback, reformulated by the LLM",
+  "positive": true,
+  "userId": "@user:matrix.example.org",
+  "conversation": [{ "role": "user | assistant", "content": "..." }]
+}
+```
+
+`userId` is the Matrix user ID of the sender (`input.userId` in `Orchestrator.handle`), included so the team can follow
+up directly with the user.
+
+If `FEEDBACK_WEBHOOK_URL` is unset, or the webhook call fails/returns non-2xx, the handler logs and returns
+`{ ok: false, error }` instead of throwing — a missing webhook must never break the conversation.
 
 ## Debug output
 
@@ -84,3 +113,4 @@ All debug lines go to `stderr` prefixed `[debug]`. Includes per-iteration messag
 ## Config used
 
 `config.openai.baseUrl`, `config.openai.apiKey`, `config.openai.model` (from `src/config.ts`).
+`config.feedbackWebhookUrl` is used by `tools/feedback.ts` only.

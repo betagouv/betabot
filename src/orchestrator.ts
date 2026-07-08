@@ -56,6 +56,11 @@ import {
   tools as tchapDocTools,
   handlers as tchapDocHandlers,
 } from "./tools/docs-tchap.js";
+import {
+  tools as feedbackTools,
+  handlers as feedbackHandlers,
+  type ToolContext,
+} from "./tools/feedback.js";
 import { detectEntities, type DetectedEntities } from "./entity-detector.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
 
@@ -103,11 +108,12 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...changelogStartupsTools,
   ...messagerieDocTools,
   ...tchapDocTools,
+  ...feedbackTools,
 ];
 
 const ALL_HANDLERS: Record<
   string,
-  (args: Record<string, unknown>) => Promise<unknown>
+  (args: Record<string, unknown>, context: ToolContext) => Promise<unknown>
 > = {
   ...memberHandlers,
   ...startupHandlers,
@@ -124,6 +130,7 @@ const ALL_HANDLERS: Record<
   ...changelogStartupsHandlers,
   ...messagerieDocHandlers,
   ...tchapDocHandlers,
+  ...feedbackHandlers,
 };
 
 export class Orchestrator {
@@ -287,6 +294,14 @@ export class Orchestrator {
 
       // Dispatch tool calls
       debug(`dispatching ${assistantMessage.tool_calls.length} tool call(s)`);
+      const toolContext: ToolContext = {
+        userId: input.userId,
+        conversation: history.map((m) => ({
+          role: m.role,
+          content:
+            typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        })),
+      };
       const toolResults: ChatCompletionToolMessageParam[] = await Promise.all(
         assistantMessage.tool_calls
           .filter((tc) => tc.type === "function")
@@ -303,7 +318,7 @@ export class Orchestrator {
                   string,
                   unknown
                 >;
-                result = await handler(args);
+                result = await handler(args, toolContext);
                 const resultStr = JSON.stringify(result);
                 debug(
                   `  -> result (${resultStr.length} chars): ${resultStr.slice(0, 200)}${resultStr.length > 200 ? "..." : ""}`,

@@ -17,6 +17,7 @@ import { tools as sqliteTools } from "../src/tools/sqlite.js";
 import { tools as wttjTools } from "../src/tools/wttj.js";
 import { tools as changelogStartupsTools } from "../src/tools/changelog-startups.js";
 import { tools as messagerieDocTools } from "../src/tools/docs-messagerie.js";
+import { tools as feedbackTools } from "../src/tools/feedback.js";
 import { SYSTEM_PROMPT } from "../src/prompt.js";
 import type {
   ChatCompletionMessageParam,
@@ -38,6 +39,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...wttjTools,
   ...changelogStartupsTools,
   ...messagerieDocTools,
+  ...feedbackTools,
 ];
 
 // Minimal realistic canned responses — enough for the LLM to stop looping.
@@ -92,6 +94,7 @@ const CANNED: Record<string, unknown> = {
   get_repo_changelog: "Changelog du dépôt de test.",
   get_org_changelog: "Changelog de l'organisation betagouv.",
   query_data: [{ result: 42 }],
+  submit_feedback: { ok: true },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────

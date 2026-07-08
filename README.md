@@ -45,26 +45,14 @@ LLM with tool calling (qwen2.5, mistral-nemo…)
   │
   ▼
 Tool dispatcher
-  ├── search_members / get_member_detail / get_member_startups
-  ├── search_startups / get_startup_detail / get_startup_members
-  ├── search_repos / get_repo_detail
-  ├── search_incubators / get_incubator_detail
-  ├── search_docs / get_doc_page            (doc.incubateur.net)
-  ├── search_docs_proconnect / get_doc_proconnect_page
-  ├── search_docs_franceconnect / get_doc_franceconnect_page
-  ├── search_docs_dsfr / get_doc_dsfr_page
-  ├── search_docs_messagerie / get_doc_messagerie_page
-  ├── search_docs_tchap / get_doc_tchap_page
-  ├── search_wttj_jobs / get_wttj_job_page
-  ├── get_startup_updates
-  ├── get_calendar
-  ├── search_videos
-  └── get_videos
 ```
 
 Search tools use **hybrid retrieval**: dense cosine similarity on `Float32Array` `.bin` embedding matrices + BM25 sparse search, fused with Reciprocal Rank Fusion (RRF).
 
 Every bot response ends with a discrete link to [open a feedback issue](https://github.com/betagouv/betabot/issues/new).
+The bot can also pick up feedback directly in conversation: when a user reacts to a response (positive or negative),
+the LLM calls the `submit_feedback` tool, thanks the user, and the query, feedback, and full conversation are posted
+to an n8n webhook (`FEEDBACK_WEBHOOK_URL`) — see [Feedback](#feedback) below.
 
 ---
 
@@ -95,63 +83,13 @@ cp .env.example .env
 # edit .env
 ```
 
-```env
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama
-OPENAI_MODEL=qwen2.5:14b
-OPENAI_EMBED_MODEL=nomic-embed-text
-EMBED_DIMS=768
-
-DATA_DIR=./data
-
-MATRIX_HOMESERVER=https://matrix.example.org
-MATRIX_USER=@betabot:example.org
-MATRIX_ACCESS_TOKEN=syt_...       # or use MATRIX_PASSWORD instead
-# MATRIX_DEVICE_ID=ABCDEFGH      # optional — only needed before first start; ignored once credentials.json exists
-```
-
 ### 3. Fetch data
 
 ```sh
 ./get-data.sh
 ```
 
-This downloads the API snapshots, calendar, and PeerTube feeds into `data/`, crawls web-based documentation sources into `data/docs-*`, and fetches WelcomeKit job offers into `data/wttj/`.
-
-Web-crawled sources use `fetch-docs.ts` — a generic crawler built on [crawlee](https://crawlee.dev) with [Readability](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown):
-
-| Source                      | URL                                                    | Output                         |
-| --------------------------- | ------------------------------------------------------ | ------------------------------ |
-| beta.gouv.fr community docs | pre-fetched via GitBook export                         | `data/doc.incubateur.net/`     |
-| ProConnect                  | `https://partenaires.proconnect.gouv.fr/docs`          | `data/docs-proconnect/`        |
-| FranceConnect               | `https://docs.partenaires.franceconnect.gouv.fr`       | `data/docs-franceconnect/`     |
-| DSFR (premiers pas)         | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` | `data/docs-dsfr/premiers-pas/` |
-| DSFR (fondamentaux)         | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` | `data/docs-dsfr/fondamentaux/` |
-| Tchap                       | `https://aide.tchap.numerique.gouv.fr/fr/`             | `data/docs-tchap/`             |
-
-The email management documentation uses `fetch-messagerie-docs.ts` — fetches 11 documents from the `docs.numerique.gouv.fr` REST API (`/formatted-content/?content_format=markdown`), reads `title` and `content` from the JSON response, and writes one markdown file per document with YAML frontmatter.
-
-| Source                  | API                                                               | Output                  |
-| ----------------------- | ----------------------------------------------------------------- | ----------------------- |
-| Messagerie (email) docs | `https://docs.numerique.gouv.fr/api/v1.0/documents/{id}/content/` | `data/docs-messagerie/` |
-
-The startup changelog is fetched from the GitHub Pages-rendered diff page and parsed by `src/parse-startup-changelog.ts` into `data/changelog-startups.json` — a map of startup slug → raw git diff. This powers the `get_startup_updates` tool.
-
-| Source                  | URL                                                     | Output                         |
-| ----------------------- | ------------------------------------------------------- | ------------------------------ |
-| Startup changelog diffs | `https://betagouv.github.io/beta.gouv.fr/startups.html` | `data/changelog-startups.json` |
-
-WelcomeKit job offers use `fetch-wttj.ts` — fetches published jobs from the WelcomeKit API and writes one markdown file per offer. Requires `WELCOMEKIT_TOKEN` to be set. Orgs are hardcoded in the script; to add one extend the `orgs` array in `fetch-wttj.ts`.
-
-| Source          | API                                      | Output             |
-| --------------- | ---------------------------------------- | ------------------ |
-| WelcomeKit jobs | `www.welcomekit.co/api/v1/external/jobs` | `data/wttj/{org}/` |
-
-To crawl a new documentation site manually:
-
-```sh
-npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
-```
+See [./specs/data.md](./specs/data.md)
 
 ### 4. Build embeddings
 
@@ -159,13 +97,21 @@ npx tsx fetch-docs.ts https://example.com/docs ./data/docs-example
 npm run embed
 ```
 
-Embeds chunks across 12 sources. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
+Embeds chunks across 12 sources in 12 sequential jobs. Each job skips automatically if its `.bin` already exists — safe to restart after an interruption. Use `--force` to rebuild everything:
 
 ```sh
 npm run embed -- --force
 ```
 
-### 5. Run
+### 5. Build the SQLite database
+
+```sh
+npm run build-db
+```
+
+Reads the fetched JSON data and creates `data/betabot.db` — a relational index of members, startups, incubators, phases, competences, and thematiques used by several tools. Must be re-run after each data fetch.
+
+### 6. Run
 
 **Matrix bot:**
 
@@ -194,8 +140,34 @@ betabot > Voici les membres…
 Run nightly or on demand:
 
 ```sh
-./get-data.sh && npm run embed -- --force
+./get-data.sh && npm run embed -- --force && npm run build-db
 ```
+
+---
+
+## Feedback
+
+Set `FEEDBACK_WEBHOOK_URL` to an n8n (or any HTTP) webhook to collect in-conversation feedback.
+When a user explicitly reacts to a bot response — positive or negative — the LLM calls the
+`submit_feedback` tool (`src/tools/feedback.ts`), replies with empathy (acknowledging the feedback,
+apologizing if it's negative, mentioning the team may follow up), and the following payload is
+POSTed to the webhook:
+
+```json
+{
+  "query": "the initial user query",
+  "feedback": "the user feedback",
+  "positive": true,
+  "userId": "@user:matrix.example.org",
+  "conversation": [{ "role": "user", "content": "..." }]
+}
+```
+
+`positive` classifies the feedback as positive or negative (set by the LLM). `userId` is the sender's Matrix ID,
+included so the team can follow up with the user directly.
+
+If `FEEDBACK_WEBHOOK_URL` is unset, or the webhook call fails, nothing is sent and the conversation
+continues unaffected.
 
 ---
 
@@ -256,8 +228,3 @@ tool definitions, the orchestrator, or the fixture set. It posts a sticky commen
 npm run build   # outputs to dist/
 npm run start
 ```
-
-## Todo
-
-- data: formations
--

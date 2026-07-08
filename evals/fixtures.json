@@ -444,5 +444,15 @@
     "id": "manual-comment-rejoinre-l-espace-tchap-de-beta",
     "question": "comment rejoinre l'espace tchap de beta ?",
     "expect_tools": ["search_docs", "get_doc_page"]
+  },
+  {
+    "id": "manual-feedback-remerciement-reponse-dmarc",
+    "question": "merci, ta réponse sur la configuration DMARC était exactement ce qu'il me fallait !",
+    "expect_tools": ["submit_feedback"]
+  },
+  {
+    "id": "manual-feedback-reponse-fausse",
+    "question": "ta réponse précédente sur les phases d'une startup est fausse, ce n'est pas du tout ça",
+    "expect_tools": ["submit_feedback"]
   }
 ]
