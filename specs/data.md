@@ -100,7 +100,7 @@ For each `Rss_Entity` id, calls:
 GET https://place-ep-recrute.talent-soft.com/handlers/offerRss.ashx?LCID=1036&Rss_Entity={id}
 ```
 
-The response is an RSS 2.0 XML feed, parsed with `jsdom` (`text/xml` mode). Each `<item>` is converted to a plain object (`title`, `link`, `description` — raw HTML, `categories` — array from repeated `<category>` tags, `pubDate`) and the full array is written as JSON to:
+The response is an RSS 2.0 XML feed, parsed with `jsdom` (`text/xml` mode). The feed's `<channel><title>` (e.g. `"Export RSS des offres - Seulement les offres à la une : Non / Organisme de rattachement : Ministère de la Culture"`) carries the organisme as the trailing part after `Organisme de rattachement :`; extracted once per feed and attached to every item as `organisme` (`""` when the channel title has no such suffix). Each `<item>` is converted to a plain object (`title`, `link`, `description` — raw HTML, `categories` — array from repeated `<category>` tags, `pubDate`, `organisme`) and the full array is written as JSON to:
 
 ```
 data/choisirleservicepublic/{Rss_Entity}.json
@@ -319,7 +319,7 @@ Index entry type: `DocChunk` — `{ path, title, breadcrumb, excerpt }` with `pa
 
 Source: all `*.json` files under `data/choisirleservicepublic/` (one per `Rss_Entity`, written by `fetch-choisirleservicepublic.ts`), except `jobs.index.json`. Skipped entirely if directory does not exist or no items are found.
 
-Embedding text per job: `"{title}\n{categories joined by ', '}\n{description}"` — `description` is `description` (raw HTML from the RSS item) stripped of HTML tags and truncated to 6000 chars.
+Embedding text per job: `"{title}\n{organisme}\n{categories joined by ', '}\n{description}"` — `description` is `description` (raw HTML from the RSS item) stripped of HTML tags and truncated to 6000 chars.
 
 Outputs: `data/choisirleservicepublic/jobs.embeddings.bin`, `data/choisirleservicepublic/jobs.bm25.json`, `data/choisirleservicepublic/jobs.index.json`
 
@@ -331,6 +331,7 @@ Index entry type:
   link: string;
   categories: string[];
   pubDate: string;
+  organisme: string; // extracted from the RSS channel title, "" if none
   excerpt: string; // stripped description, truncated to 200 chars
 }
 ```

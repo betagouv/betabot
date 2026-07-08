@@ -14,6 +14,7 @@ interface JobChunk {
   link: string;
   categories: string[];
   pubDate: string;
+  organisme: string;
   excerpt: string;
 }
 
@@ -23,6 +24,7 @@ interface JobItem {
   description: string;
   categories: string[];
   pubDate: string;
+  organisme: string;
 }
 
 function stripHtml(html: string): string {
@@ -77,6 +79,7 @@ async function get_choisirleservicepublic_job_detail(
         link: item.link,
         categories: item.categories,
         pubDate: item.pubDate,
+        organisme: item.organisme,
         description: stripHtml(item.description ?? ""),
       };
     }

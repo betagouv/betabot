@@ -15,14 +15,25 @@ interface JobItem {
   description: string;
   categories: string[];
   pubDate: string;
+  organisme: string;
 }
 
 function textOf(el: Element | null): string {
   return el?.textContent?.trim() ?? "";
 }
 
+// Channel title looks like:
+// "Export RSS des offres - Seulement les offres à la une : Non / Organisme de rattachement : Ministère de la Culture"
+// The organisme, when present, is the trailing part after "Organisme de rattachement :".
+function extractOrganisme(channelTitle: string): string {
+  const match = channelTitle.match(/Organisme de rattachement\s*:\s*(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
 function parseRss(xml: string): JobItem[] {
   const dom = new JSDOM(xml, { contentType: "text/xml" });
+  const channelTitle = textOf(dom.window.document.querySelector("channel > title"));
+  const organisme = extractOrganisme(channelTitle);
   const items = Array.from(dom.window.document.querySelectorAll("item"));
   return items.map((item) => ({
     title: textOf(item.querySelector("title")),
@@ -32,6 +43,7 @@ function parseRss(xml: string): JobItem[] {
       textOf(c),
     ),
     pubDate: textOf(item.querySelector("pubDate")),
+    organisme,
   }));
 }
 

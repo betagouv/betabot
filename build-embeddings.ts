@@ -187,6 +187,7 @@ interface JobItem {
   description: string;
   categories: string[];
   pubDate: string;
+  organisme: string;
 }
 
 interface JobChunk {
@@ -194,6 +195,7 @@ interface JobChunk {
   link: string;
   categories: string[];
   pubDate: string;
+  organisme: string;
   excerpt: string;
 }
 
@@ -674,10 +676,11 @@ async function buildChoisirLeServicePublicEmbeddings(
         link: item.link,
         categories: item.categories ?? [],
         pubDate: item.pubDate ?? "",
+        organisme: item.organisme ?? "",
         excerpt: excerpt(description),
       });
       texts.push(
-        `${item.title}\n${(item.categories ?? []).join(", ")}\n${excerpt(description, 6000)}`,
+        `${item.title}\n${item.organisme ?? ""}\n${(item.categories ?? []).join(", ")}\n${excerpt(description, 6000)}`,
       );
     }
   }
