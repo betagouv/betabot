@@ -21,7 +21,7 @@ describe("submit_feedback", () => {
 
     const result = await handlers["submit_feedback"]!(
       { feedback: "super réponse" },
-      { conversation: [{ role: "user", content: "salut" }] },
+      { userId: "@marie:matrix.org", conversation: [{ role: "user", content: "salut" }] },
     );
 
     assert.equal(called, false);
@@ -31,7 +31,7 @@ describe("submit_feedback", () => {
     });
   });
 
-  it("posts the initial query, the feedback and the full conversation", async () => {
+  it("posts the initial query, the feedback, the userId and the full conversation", async () => {
     configWithWebhook.feedbackWebhookUrl = "https://n8n.example.org/webhook/feedback";
 
     let capturedUrl: string | undefined;
@@ -50,7 +50,7 @@ describe("submit_feedback", () => {
 
     const result = await handlers["submit_feedback"]!(
       { feedback: "L'utilisateur confirme que la réponse DMARC était correcte." },
-      { conversation },
+      { userId: "@marie:matrix.org", conversation },
     );
 
     assert.equal(capturedUrl, "https://n8n.example.org/webhook/feedback");
@@ -60,6 +60,7 @@ describe("submit_feedback", () => {
       payload.feedback,
       "L'utilisateur confirme que la réponse DMARC était correcte.",
     );
+    assert.equal(payload.userId, "@marie:matrix.org");
     assert.deepEqual(payload.conversation, conversation);
     assert.deepEqual(result, { ok: true });
   });
@@ -71,7 +72,7 @@ describe("submit_feedback", () => {
 
     const result = await handlers["submit_feedback"]!(
       { feedback: "avis" },
-      { conversation: [{ role: "user", content: "salut" }] },
+      { userId: "@marie:matrix.org", conversation: [{ role: "user", content: "salut" }] },
     );
 
     assert.deepEqual(result, { ok: false, error: "webhook returned 500" });

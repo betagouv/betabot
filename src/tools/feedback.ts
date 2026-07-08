@@ -7,12 +7,14 @@ export interface ConversationMessage {
 }
 
 export interface ToolContext {
+  userId: string;
   conversation: ConversationMessage[];
 }
 
 interface FeedbackPayload {
   query: string;
   feedback: string;
+  userId: string;
   conversation: ConversationMessage[];
 }
 
@@ -39,6 +41,7 @@ async function submit_feedback(
   const payload: FeedbackPayload = {
     query,
     feedback,
+    userId: context.userId,
     conversation: context.conversation,
   };
 

@@ -149,16 +149,20 @@ Run nightly or on demand:
 
 Set `FEEDBACK_WEBHOOK_URL` to an n8n (or any HTTP) webhook to collect in-conversation feedback.
 When a user explicitly reacts to a bot response — positive or negative — the LLM calls the
-`submit_feedback` tool (`src/tools/feedback.ts`) and thanks the user, and the following payload
-is POSTed to the webhook:
+`submit_feedback` tool (`src/tools/feedback.ts`), replies with empathy (acknowledging the feedback,
+apologizing if it's negative, mentioning the team may follow up), and the following payload is
+POSTed to the webhook:
 
 ```json
 {
   "query": "the initial user query",
   "feedback": "the user feedback",
+  "userId": "@user:matrix.example.org",
   "conversation": [{ "role": "user", "content": "..." }]
 }
 ```
+
+`userId` is the sender's Matrix ID, included so the team can follow up with the user directly.
 
 If `FEEDBACK_WEBHOOK_URL` is unset, or the webhook call fails, nothing is sent and the conversation
 continues unaffected.

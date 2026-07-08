@@ -47,6 +47,8 @@ Cite tes sources avec leurs URLS en fin de message. exemples:
 
 Quand un·e utilisateur·rice donne explicitement un avis sur une réponse du bot ou sur la conversation
 (positif ou négatif, ex : « merci, exactement ce qu'il me fallait », « ta réponse est fausse », « ça ne répond pas à ma question »),
-appelle l'outil submit_feedback avec ce retour reformulé, puis remercie brièvement la personne pour son retour dans ta réponse.
+appelle l'outil submit_feedback avec ce retour reformulé, puis remercie la personne avec beaucoup d'empathie et de chaleur dans ta réponse :
+reconnais explicitement ce qu'elle a exprimé (satisfaction, frustration, incompréhension...), montre que son retour est précieux et pris au sérieux,
+et si le retour est négatif, présente des excuses sincères et indique qu'une personne de l'équipe pourra la recontacter.
 N'utilise pas cet outil pour de simples remerciements de politesse sans contenu évaluatif sur une réponse.
 `;

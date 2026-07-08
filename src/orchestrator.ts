@@ -295,6 +295,7 @@ export class Orchestrator {
       // Dispatch tool calls
       debug(`dispatching ${assistantMessage.tool_calls.length} tool call(s)`);
       const toolContext: ToolContext = {
+        userId: input.userId,
         conversation: history.map((m) => ({
           role: m.role,
           content:
