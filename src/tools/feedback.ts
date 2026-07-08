@@ -14,6 +14,7 @@ export interface ToolContext {
 interface FeedbackPayload {
   query: string;
   feedback: string;
+  positive: boolean;
   userId: string;
   conversation: ConversationMessage[];
 }
@@ -25,6 +26,7 @@ interface FeedbackResult {
 
 async function submit_feedback(
   feedback: string,
+  positive: boolean,
   context: ToolContext,
 ): Promise<FeedbackResult> {
   const webhookUrl = config.feedbackWebhookUrl;
@@ -41,6 +43,7 @@ async function submit_feedback(
   const payload: FeedbackPayload = {
     query,
     feedback,
+    positive,
     userId: context.userId,
     conversation: context.conversation,
   };
@@ -82,8 +85,13 @@ const submitFeedbackTool: ChatCompletionTool = {
           description:
             "Le retour de l'utilisateur, reformulé clairement (ce qui a bien ou mal fonctionné).",
         },
+        positive: {
+          type: "boolean",
+          description:
+            "true si le retour est positif (satisfaction), false si le retour est négatif (frustration, erreur, réponse inadaptée).",
+        },
       },
-      required: ["feedback"],
+      required: ["feedback", "positive"],
     },
   },
 };
@@ -95,5 +103,9 @@ export const handlers: Record<
   (args: Record<string, unknown>, context: ToolContext) => Promise<unknown>
 > = {
   submit_feedback: (args, context) =>
-    submit_feedback(String(args["feedback"] ?? ""), context),
+    submit_feedback(
+      String(args["feedback"] ?? ""),
+      Boolean(args["positive"]),
+      context,
+    ),
 };

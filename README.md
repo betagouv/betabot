@@ -157,12 +157,14 @@ POSTed to the webhook:
 {
   "query": "the initial user query",
   "feedback": "the user feedback",
+  "positive": true,
   "userId": "@user:matrix.example.org",
   "conversation": [{ "role": "user", "content": "..." }]
 }
 ```
 
-`userId` is the sender's Matrix ID, included so the team can follow up with the user directly.
+`positive` classifies the feedback as positive or negative (set by the LLM). `userId` is the sender's Matrix ID,
+included so the team can follow up with the user directly.
 
 If `FEEDBACK_WEBHOOK_URL` is unset, or the webhook call fails, nothing is sent and the conversation
 continues unaffected.

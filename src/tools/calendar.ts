@@ -82,7 +82,6 @@ async function get_calendar(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   );
 
-  console.log({ events });
   return events;
 }
 

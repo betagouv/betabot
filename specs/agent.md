@@ -83,10 +83,10 @@ Doc-based tools (`docs-*.ts`, `wttj.ts`) are built with the `makeDocsTool()` fac
 
 ## Feedback tool (`tools/feedback.ts`)
 
-`submit_feedback(feedback)` is called by the LLM when a user explicitly reacts to a bot response or to the conversation
-(positive or negative). The system prompt instructs the LLM to call it only on evaluative feedback (not plain politeness),
-to reply with empathy — acknowledging the sentiment, apologizing if the feedback is negative — and to mention that the
-team may follow up.
+`submit_feedback(feedback, positive)` is called by the LLM when a user explicitly reacts to a bot response or to the
+conversation (positive or negative). `positive` is a required boolean the LLM sets to classify the feedback. The system
+prompt instructs the LLM to call it only on evaluative feedback (not plain politeness), to reply with empathy —
+acknowledging the sentiment, apologizing if the feedback is negative — and to mention that the team may follow up.
 
 The handler POSTs to `config.feedbackWebhookUrl` (env `FEEDBACK_WEBHOOK_URL`, an n8n webhook):
 
@@ -94,6 +94,7 @@ The handler POSTs to `config.feedbackWebhookUrl` (env `FEEDBACK_WEBHOOK_URL`, an
 {
   "query": "first user message in the conversation",
   "feedback": "the user's feedback, reformulated by the LLM",
+  "positive": true,
   "userId": "@user:matrix.example.org",
   "conversation": [{ "role": "user | assistant", "content": "..." }]
 }

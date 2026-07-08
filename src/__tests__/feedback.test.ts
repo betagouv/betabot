@@ -20,7 +20,7 @@ describe("submit_feedback", () => {
     }) as typeof fetch;
 
     const result = await handlers["submit_feedback"]!(
-      { feedback: "super réponse" },
+      { feedback: "super réponse", positive: true },
       { userId: "@marie:matrix.org", conversation: [{ role: "user", content: "salut" }] },
     );
 
@@ -31,7 +31,7 @@ describe("submit_feedback", () => {
     });
   });
 
-  it("posts the initial query, the feedback, the userId and the full conversation", async () => {
+  it("posts the initial query, the feedback, the positive flag, the userId and the full conversation", async () => {
     configWithWebhook.feedbackWebhookUrl = "https://n8n.example.org/webhook/feedback";
 
     let capturedUrl: string | undefined;
@@ -49,7 +49,10 @@ describe("submit_feedback", () => {
     ];
 
     const result = await handlers["submit_feedback"]!(
-      { feedback: "L'utilisateur confirme que la réponse DMARC était correcte." },
+      {
+        feedback: "L'utilisateur confirme que la réponse DMARC était correcte.",
+        positive: true,
+      },
       { userId: "@marie:matrix.org", conversation },
     );
 
@@ -60,9 +63,28 @@ describe("submit_feedback", () => {
       payload.feedback,
       "L'utilisateur confirme que la réponse DMARC était correcte.",
     );
+    assert.equal(payload.positive, true);
     assert.equal(payload.userId, "@marie:matrix.org");
     assert.deepEqual(payload.conversation, conversation);
     assert.deepEqual(result, { ok: true });
+  });
+
+  it("marks negative feedback with positive: false", async () => {
+    configWithWebhook.feedbackWebhookUrl = "https://n8n.example.org/webhook/feedback";
+
+    let capturedBody: string | undefined;
+    globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+      capturedBody = init?.body as string;
+      return new Response(null, { status: 200 });
+    }) as typeof fetch;
+
+    await handlers["submit_feedback"]!(
+      { feedback: "La réponse sur les phases était fausse.", positive: false },
+      { userId: "@marie:matrix.org", conversation: [{ role: "user", content: "salut" }] },
+    );
+
+    const payload = JSON.parse(capturedBody!);
+    assert.equal(payload.positive, false);
   });
 
   it("reports an error when the webhook responds with a non-2xx status", async () => {
@@ -71,7 +93,7 @@ describe("submit_feedback", () => {
       new Response(null, { status: 500 })) as typeof fetch;
 
     const result = await handlers["submit_feedback"]!(
-      { feedback: "avis" },
+      { feedback: "avis", positive: false },
       { userId: "@marie:matrix.org", conversation: [{ role: "user", content: "salut" }] },
     );
 
