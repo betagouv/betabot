@@ -52,8 +52,9 @@ Search tools use **hybrid retrieval**: dense cosine similarity on `Float32Array`
 
 Every bot response ends with a discrete link to [open a feedback issue](https://github.com/betagouv/betabot/issues/new).
 The bot can also pick up feedback directly in conversation: when a user reacts to a response (positive or negative),
-the LLM calls the `submit_feedback` tool, thanks the user, and the query, feedback, and full conversation are posted
-to an n8n webhook (`FEEDBACK_WEBHOOK_URL`) — see [Feedback](#feedback) below.
+it thanks the user and asks permission to transmit the feedback to the team; only after the user explicitly confirms
+does the LLM call the `submit_feedback` tool, posting the query, feedback, and full conversation to an n8n webhook
+(`FEEDBACK_WEBHOOK_URL`) — see [Feedback](#feedback) below.
 
 ---
 
@@ -149,10 +150,11 @@ Run nightly or on demand:
 ## Feedback
 
 Set `FEEDBACK_WEBHOOK_URL` to an n8n (or any HTTP) webhook to collect in-conversation feedback.
-When a user explicitly reacts to a bot response — positive or negative — the LLM calls the
-`submit_feedback` tool (`src/tools/feedback.ts`), replies with empathy (acknowledging the feedback,
-apologizing if it's negative, mentioning the team may follow up), and the following payload is
-POSTed to the webhook:
+When a user explicitly reacts to a bot response — positive or negative — the bot replies with
+empathy (acknowledging the feedback, apologizing if it's negative) and **asks permission** to
+transmit the feedback (and the conversation) to the team. Only once the user explicitly confirms
+(e.g. "oui", "vas-y") does the LLM call the `submit_feedback` tool (`src/tools/feedback.ts`) and
+the following payload gets POSTed to the webhook. If the user declines, nothing is sent.
 
 ```json
 {

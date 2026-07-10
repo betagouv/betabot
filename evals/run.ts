@@ -101,10 +101,18 @@ const CANNED: Record<string, unknown> = {
 
 interface Fixture {
   id: string;
-  question: string;
-  // All tools that must appear in the call log. Empty array = no tool expected.
+  // Single-turn question. Mutually exclusive with `questions`.
+  question?: string;
+  // Multi-turn conversation: each entry is a user message, sent in order over one
+  // growing message history (like Orchestrator does across turns).
+  questions?: string[];
+  // All tools that must appear in the call log across the whole conversation.
+  // Empty array = no tool expected at all.
   expect_tools: string[];
   expect_first_tool?: string; // if set, the very first tool call must match this name
+  // Per-turn tool assertions: expect_tools_by_turn[i] = tools that must appear in turn i
+  // (same subset-match semantics as expect_tools; empty array = no tool expected on that turn).
+  expect_tools_by_turn?: string[][];
   // Per-tool arg assertions (checked against the first call of that tool).
   // String values use case-insensitive substring matching; others use strict equality.
   expect_args?: Record<string, Record<string, unknown>>;
@@ -121,6 +129,7 @@ interface CaseResult {
   expect_tools: string[];
   first_tool: string | null;
   tools: ToolCall[];
+  turns: ToolCall[][];
   pass: boolean;
   response_chars: number;
 }
@@ -150,14 +159,10 @@ function argsMatch(actual: Record<string, unknown>, expected: Record<string, unk
 
 // ─── Eval loop ────────────────────────────────────────────────────────────────
 
-async function runCase(
+async function runTurn(
   client: OpenAI,
-  question: string
+  messages: ChatCompletionMessageParam[]
 ): Promise<{ tools: ToolCall[]; response: string }> {
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: question },
-  ];
   const toolLog: ToolCall[] = [];
 
   for (let i = 0; i < 5; i++) {
@@ -183,6 +188,28 @@ async function runCase(
     }
   }
   return { tools: toolLog, response: "" };
+}
+
+// Runs a full conversation (one or more user turns) over one growing message
+// history, mirroring how Orchestrator threads history across turns.
+async function runCase(
+  client: OpenAI,
+  questions: string[]
+): Promise<{ tools: ToolCall[]; turns: ToolCall[][]; response: string }> {
+  const messages: ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM_PROMPT }];
+  const turns: ToolCall[][] = [];
+  const toolLog: ToolCall[] = [];
+  let response = "";
+
+  for (const question of questions) {
+    messages.push({ role: "user", content: question });
+    const turnResult = await runTurn(client, messages);
+    turns.push(turnResult.tools);
+    toolLog.push(...turnResult.tools);
+    response = turnResult.response;
+  }
+
+  return { tools: toolLog, turns, response };
 }
 
 // ─── Compare ──────────────────────────────────────────────────────────────────
@@ -261,8 +288,10 @@ async function main() {
   console.log(`betabot eval — ${fixtures.length} cases  model=${run.model}  git=${run.git}\n`);
 
   for (const fixture of fixtures) {
-    process.stdout.write(`  ${fixture.question.slice(0, 52).padEnd(54)}`);
-    const { tools, response } = await runCase(client, fixture.question);
+    const questions = fixture.questions ?? (fixture.question ? [fixture.question] : []);
+    const label = questions.join(" » ");
+    process.stdout.write(`  ${label.slice(0, 52).padEnd(54)}`);
+    const { tools, turns, response } = await runCase(client, questions);
     const toolNames = tools.map((t) => t.name);
     const firstTool = toolNames[0] ?? null;
     const toolsMatch = fixture.expect_tools.length === 0
@@ -284,15 +313,30 @@ async function main() {
         }
       }
     }
-    const pass = toolsMatch && firstToolMatch && argFailures.length === 0;
+    const turnFailures: string[] = [];
+    if (fixture.expect_tools_by_turn) {
+      fixture.expect_tools_by_turn.forEach((expected, i) => {
+        const gotNames = (turns[i] ?? []).map((t) => t.name);
+        const turnMatch = expected.length === 0
+          ? gotNames.length === 0
+          : expected.every((t) => gotNames.includes(t));
+        if (!turnMatch) {
+          const exp = expected.length ? `[${expected.join(", ")}]` : "none";
+          const got = gotNames.length ? `[${gotNames.join(", ")}]` : "none";
+          turnFailures.push(`turn ${i}: expected=${exp} got=${got}`);
+        }
+      });
+    }
+    const pass = toolsMatch && firstToolMatch && argFailures.length === 0 && turnFailures.length === 0;
     if (pass) run.pass++;
 
     run.cases.push({
       id: fixture.id,
-      question: fixture.question,
+      question: label,
       expect_tools: fixture.expect_tools,
       first_tool: firstTool,
       tools,
+      turns,
       pass,
       response_chars: response.length,
     });
@@ -304,7 +348,8 @@ async function main() {
       const exp = fixture.expect_tools.length ? `[${fixture.expect_tools.join(", ")}]` : "none";
       const firstExp = fixture.expect_first_tool ? ` first=${fixture.expect_first_tool}` : "";
       const argExp = argFailures.length ? `  args:${argFailures.join("; ")}` : "";
-      console.log(`✗  expected=${exp}${firstExp}  got=${gotLabel}${argExp}`);
+      const turnExp = turnFailures.length ? `  ${turnFailures.join("; ")}` : "";
+      console.log(`✗  expected=${exp}${firstExp}  got=${gotLabel}${argExp}${turnExp}`);
     }
   }
 

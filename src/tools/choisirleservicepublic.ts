@@ -28,7 +28,10 @@ interface JobItem {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Lazy-loaded search indices
@@ -47,11 +50,19 @@ async function ensureLoaded() {
 
 async function search_choisirleservicepublic_jobs(
   query: string,
-  top_k = 5,
+  top_k = 10,
 ): Promise<Array<JobChunk & { score: number }>> {
   await ensureLoaded();
   const queryVec = await embedText(query);
-  return hybridSearch(query, queryVec, matrix!, bm25, indexEntries!, DIMS, top_k);
+  return hybridSearch(
+    query,
+    queryVec,
+    matrix!,
+    bm25,
+    indexEntries!,
+    DIMS,
+    top_k,
+  );
 }
 
 async function get_choisirleservicepublic_job_detail(
