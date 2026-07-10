@@ -76,7 +76,10 @@ const submitFeedbackTool: ChatCompletionTool = {
       "Enregistre un retour utilisateur (positif ou négatif) sur la conversation en cours et le transmet à l'équipe beta.gouv.fr. " +
       "À utiliser uniquement quand l'utilisateur exprime explicitement un avis sur une réponse du bot ou sur la conversation " +
       "(ex : « merci, exactement ce qu'il me fallait », « ta réponse est fausse », « ça ne répond pas à ma question »). " +
-      "Ne pas utiliser pour de simples remerciements de politesse sans contenu évaluatif.",
+      "Ne pas utiliser pour de simples remerciements de politesse sans contenu évaluatif. " +
+      "IMPORTANT : n'appelle CET OUTIL qu'après que l'utilisateur a explicitement donné son accord pour transmettre son retour " +
+      "à l'équipe (ex : « oui », « vas-y », « d'accord »). Si la permission n'a pas encore été demandée ou obtenue, ne l'appelle " +
+      "pas — demande d'abord la permission dans ta réponse texte.",
     parameters: {
       type: "object",
       properties: {

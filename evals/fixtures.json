@@ -462,12 +462,29 @@
   },
   {
     "id": "manual-feedback-remerciement-reponse-dmarc",
-    "question": "merci, ta réponse sur la configuration DMARC était exactement ce qu'il me fallait !",
-    "expect_tools": ["submit_feedback"]
+    "questions": [
+      "merci, ta réponse sur la configuration DMARC était exactement ce qu'il me fallait !",
+      "oui, vas-y, envoie ce retour à l'équipe"
+    ],
+    "expect_tools": ["submit_feedback"],
+    "expect_tools_by_turn": [[], ["submit_feedback"]]
   },
   {
     "id": "manual-feedback-reponse-fausse",
-    "question": "ta réponse précédente sur les phases d'une startup est fausse, ce n'est pas du tout ça",
-    "expect_tools": ["submit_feedback"]
+    "questions": [
+      "ta réponse précédente sur les phases d'une startup est fausse, ce n'est pas du tout ça",
+      "d'accord, tu peux transmettre à l'équipe"
+    ],
+    "expect_tools": ["submit_feedback"],
+    "expect_tools_by_turn": [[], ["submit_feedback"]]
+  },
+  {
+    "id": "manual-feedback-decline-transmission",
+    "questions": [
+      "ta réponse précédente sur les phases d'une startup est fausse, ce n'est pas du tout ça",
+      "non merci, laisse tomber, ce n'est pas la peine de transmettre"
+    ],
+    "expect_tools": [],
+    "expect_tools_by_turn": [[], []]
   }
 ]

@@ -57,9 +57,16 @@ function loadEmbeddingCache(): Map<string, number[]> {
       fs.readFileSync(CACHE_IDX, "utf-8"),
     ) as CacheIndex;
     const buf = fs.readFileSync(CACHE_BIN);
-    const matrix = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+    const matrix = new Float32Array(
+      buf.buffer,
+      buf.byteOffset,
+      buf.byteLength / 4,
+    );
     for (const [hash, row] of Object.entries(entries)) {
-      cache.set(hash, Array.from(matrix.subarray(row * dims, (row + 1) * dims)));
+      cache.set(
+        hash,
+        Array.from(matrix.subarray(row * dims, (row + 1) * dims)),
+      );
     }
     console.log(`  cache: ${cache.size} entries loaded`);
   } catch {
@@ -453,7 +460,13 @@ async function buildMdDocsEmbeddings(
 async function buildDocsEmbeddings(cache: Map<string, number[]>) {
   console.log("\n[4/13] Building docs embeddings…");
   const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
-  await buildMdDocsEmbeddings("doc", [docsDir], docsDir, cache, "No doc files found");
+  await buildMdDocsEmbeddings(
+    "doc",
+    [docsDir],
+    docsDir,
+    cache,
+    "No doc files found",
+  );
 }
 
 // ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
@@ -677,7 +690,7 @@ async function buildChoisirLeServicePublicEmbeddings(
         categories: item.categories ?? [],
         pubDate: item.pubDate ?? "",
         organisme: item.organisme ?? "",
-        excerpt: excerpt(description),
+        excerpt: excerpt(description, 400),
       });
       texts.push(
         `${item.title}\n${item.organisme ?? ""}\n${(item.categories ?? []).join(", ")}\n${excerpt(description, 6000)}`,
