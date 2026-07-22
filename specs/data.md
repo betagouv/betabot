@@ -108,7 +108,7 @@ data/choisirleservicepublic/{Rss_Entity}.json
 
 Each run overwrites the file for that `Rss_Entity` with the current feed contents.
 
-### PeerTube feeds (curl)
+### PeerTube videos (`fetch_peertube_channel`, curl + jq)
 
 All channels from `tube.numerique.gouv.fr`, sorted by `-createdAt`:
 
@@ -124,6 +124,23 @@ All channels from `tube.numerique.gouv.fr`, sorted by `-createdAt`:
 | `datagouvfr.json`          | `datagouvfr`          |
 | `fabnum.mte.json`          | `fabnum.mte`          |
 | `ruche_numerique.json`     | `ruche_numerique`     |
+
+Fetched from the REST API (`/api/v1/video-channels/{channel}/videos?start=…&count=100&sort=-createdAt`), paginated 100 at a time until a page returns fewer than 100 items. **Not** the `/feeds/videos.json` endpoint — that one silently caps at 20 items per channel, so any channel with more than 20 videos loses its older ones (a Feb 2025 video was missing from search for this reason until this was fixed).
+
+Each channel's pages are merged and reshaped with `jq` into the same `{items: [...]}` shape `build-embeddings.ts` Job 5 expects:
+
+```ts
+{
+  id: string; // https://tube.numerique.gouv.fr/w/{shortUUID}
+  url: string; // same
+  title: string; // .name
+  summary: string; // .description — PeerTube's list endpoint truncates this to ~250 chars; full text requires a per-video GET
+  date_published: string; // .publishedAt
+  date_modified: string; // .updatedAt
+}
+```
+
+`content_html` is not populated by this fetch path; Job 5 falls back to `summary` when it's absent.
 
 ### Calendar
 
