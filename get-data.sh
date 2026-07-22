@@ -36,16 +36,40 @@ mkdir -p "$DATA_DIR/docs-messagerie"
 npx tsx fetch-messagerie-docs.ts
 
 mkdir -p "$DATA_DIR/peertube"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=animation_beta&sort=-createdAt" -o "$DATA_DIR/peertube/animation_beta.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=lasuite_modedemploi&sort=-createdAt" -o "$DATA_DIR/peertube/lasuite_modedemploi.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=bluehats&sort=-createdAt" -o "$DATA_DIR/peertube/bluehats.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=lasuite&sort=-createdAt" -o "$DATA_DIR/peertube/lasuite.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=grist&sort=-createdAt" -o "$DATA_DIR/peertube/grist.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=designgouv&sort=-createdAt" -o "$DATA_DIR/peertube/designgouv.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=tchap&sort=-createdAt" -o "$DATA_DIR/peertube/tchap.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=datagouvfr&sort=-createdAt" -o "$DATA_DIR/peertube/datagouvfr.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=fabnum.mte&sort=-createdAt" -o "$DATA_DIR/peertube/fabnum.mte.json"
-curl "https://tube.numerique.gouv.fr/feeds/videos.json?videoChannelName=ruche_numerique&sort=-createdAt" -o "$DATA_DIR/peertube/ruche_numerique.json"
+
+# The /feeds/videos.json endpoint silently caps at 20 items per channel, so
+# channels with more videos lose their older ones. Page through the REST API
+# instead (100 items per page) and reshape into the same {items: [...]} shape
+# build-embeddings.ts expects.
+fetch_peertube_channel() {
+  channel="$1"
+  out="$DATA_DIR/peertube/$channel.json"
+  page_dir=$(mktemp -d)
+  page=0
+  count=100
+  while true; do
+    start=$((page * count))
+    curl -s "https://tube.numerique.gouv.fr/api/v1/video-channels/$channel/videos?start=$start&count=$count&sort=-createdAt" -o "$page_dir/page_$page.json"
+    got=$(jq '.data | length' "$page_dir/page_$page.json")
+    page=$((page + 1))
+    if [ "$got" -lt "$count" ]; then
+      break
+    fi
+  done
+  jq -s '{items: [.[] | .data[] | {
+    id: ("https://tube.numerique.gouv.fr/w/" + .shortUUID),
+    url: ("https://tube.numerique.gouv.fr/w/" + .shortUUID),
+    title: .name,
+    summary: .description,
+    date_published: .publishedAt,
+    date_modified: .updatedAt
+  }]}' "$page_dir"/page_*.json > "$out"
+  rm -rf "$page_dir"
+}
+
+for channel in animation_beta lasuite_modedemploi bluehats lasuite grist designgouv tchap datagouvfr fabnum.mte ruche_numerique; do
+  fetch_peertube_channel "$channel"
+done
 
 # public calendar
 if [ -n "$CALENDAR_ICS_URL" ]; then
