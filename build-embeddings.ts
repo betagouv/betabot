@@ -482,7 +482,12 @@ async function buildVideosEmbeddings(cache: Map<string, number[]>) {
 
   const files = fs
     .readdirSync(peertubeDir)
-    .filter((f) => f.endsWith(".json") && f !== "videos.index.json");
+    .filter(
+      (f) =>
+        f.endsWith(".json") &&
+        f !== "videos.index.json" &&
+        f !== "videos.bm25.json",
+    );
 
   const chunks: VideoChunk[] = [];
   const texts: string[] = [];
@@ -669,7 +674,9 @@ async function buildChoisirLeServicePublicEmbeddings(
 
   const files = fs
     .readdirSync(dir)
-    .filter((f) => f.endsWith(".json") && f !== "jobs.index.json");
+    .filter(
+      (f) => f.endsWith(".json") && f !== "jobs.index.json" && f !== "jobs.bm25.json",
+    );
 
   const chunks: JobChunk[] = [];
   const texts: string[] = [];
