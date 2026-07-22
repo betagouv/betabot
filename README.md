@@ -147,6 +147,20 @@ Run nightly or on demand:
 
 ---
 
+## Reports
+
+Generate a weekly markdown activity report for one incubator (new startups, startup content changes, new members, relevant doc changes):
+
+```sh
+npm run create-report -- mtes
+# or an ad-hoc range:
+npm run create-report -- mtes --since=2026-07-01 --until=2026-07-21
+```
+
+Written to `data/reports/{slug}/{since}_{until}.md`. See `specs/report.md` for sources and known limitations.
+
+---
+
 ## Feedback
 
 Set `FEEDBACK_WEBHOOK_URL` to an n8n (or any HTTP) webhook to collect in-conversation feedback.

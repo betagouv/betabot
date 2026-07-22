@@ -31,7 +31,10 @@ Three-phase pipeline: **fetch** raw data (`get-data.sh`), **embed** into search 
 | ----------------------------- | ------------------------------------------------------------------------ |
 | `data/gitscan/`               | `github.com/betagouv/gitscan` — `--depth=1`                              |
 | `data/doc.incubateur.net/`    | `github.com/betagouv/doc.incubateur.net-communaute` — `--depth=500`      |
+| `data/beta.gouv.fr/`          | `github.com/betagouv/beta.gouv.fr` — `--depth=500`                       |
 On subsequent runs, `git pull` updates each repo in-place.
+
+`data/beta.gouv.fr/` is a real git history clone (unlike `data/startups-changelog.html` / `changelog-startups.json`, which are a single squashed diff per startup scraped from a pre-rendered report). It's used by `create-report.ts` (see `specs/report.md`) to diff `content/_startups/*.md` over an arbitrary date range.
 
 ### Web crawl (fetch-docs.ts)
 

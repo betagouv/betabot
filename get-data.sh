@@ -19,6 +19,12 @@ if [ -d "$DATA_DIR/doc.incubateur.net" ]; then
 else
   git clone https://github.com/betagouv/doc.incubateur.net-communaute --depth=500 "$DATA_DIR/doc.incubateur.net"
 fi
+
+if [ -d "$DATA_DIR/beta.gouv.fr" ]; then
+  git -C "$DATA_DIR/beta.gouv.fr" pull
+else
+  git clone https://github.com/betagouv/beta.gouv.fr --depth=500 "$DATA_DIR/beta.gouv.fr"
+fi
 # dont embed internal instructions or noise
 rm -r $DATA_DIR/doc.incubateur.net/les-standards/.adrs || true
 rm -r $DATA_DIR/doc.incubateur.net/les-standards/*.md || true
