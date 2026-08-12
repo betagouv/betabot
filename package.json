@@ -17,6 +17,7 @@
     "eval:report": "node --import tsx evals/report.ts",
     "eval:trend": "node --import tsx evals/trend.ts",
     "get-data": "sh get-data.sh",
+    "create-report": "node --env-file=.env --import tsx create-report.ts",
     "get-device-id": "node --env-file=.env --import tsx src/get-device-id.ts",
     "test": "tsc && node --test 'dist/src/__tests__/**/*.test.js'"
   },
