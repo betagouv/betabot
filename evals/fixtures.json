@@ -704,5 +704,19 @@
     "expect_tools": [
       "standards_report"
     ]
+  },
+  {
+    "id": "standards-who-no-security",
+    "question": "quelles startups n'ont pas avancé sur les standards sécurité ?",
+    "expect_tools": [
+      "list_standards_coverage"
+    ]
+  },
+  {
+    "id": "standards-report-security",
+    "question": "donne-moi le classement des startups par avancement sur les standards de sécurité",
+    "expect_tools": [
+      "standards_report"
+    ]
   }
 ]

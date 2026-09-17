@@ -138,6 +138,26 @@ describe("standards tools", () => {
     assert.equal(res.summary.global_completion_average, 62.5);
   });
 
+  it("breaks down by_category sorted worst-first when a category is given", async () => {
+    module = await import("../tools/standards.js");
+    const res = (await module.handlers["list_standards_coverage"]!({
+      category: "accessibilité",
+    })) as {
+      filter: { category: string };
+      by_category: Array<{ startup_id: string; completion: number | null }>;
+    };
+    // matches category normalization ("accessibilité" is exact here)
+    assert.equal(res.filter.category, "accessibilité");
+    // mono=50, verta=0 → verta first, ascending order
+    assert.deepEqual(
+      res.by_category.map((s) => [s.startup_id, s.completion]),
+      [
+        ["verta", 0],
+        ["mono", 50],
+      ],
+    );
+  });
+
   it("produces a markdown report", async () => {
     module = await import("../tools/standards.js");
     const report = (await module.handlers["standards_report"]!({})) as string;

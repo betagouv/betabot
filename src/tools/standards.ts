@@ -141,6 +141,7 @@ async function get_startup_standards_evaluation(
 async function list_standards_coverage(params: {
   incubator?: string;
   thematique?: string;
+  category?: string;
 }): Promise<unknown> {
   const byStartup = readEvaluations();
   const startups = readStartups();
@@ -151,6 +152,11 @@ async function list_standards_coverage(params: {
   const thematiqueFilter = params.thematique
     ? params.thematique.toLowerCase()
     : null;
+  // Normalize the requested category: case/whitespace-insensitive, so
+  // "securite", "Sécurité", "securite " all match "sécurité".
+  const categoryFilter = params.category
+    ? CATEGORIES.find((c) => c.toLowerCase() === params.category!.trim().toLowerCase())
+    : undefined;
 
   const thematiques = thematiqueFilter
     ? readThematiques([...startups.keys()])
@@ -214,7 +220,11 @@ async function list_standards_coverage(params: {
 
   return {
     population: ACTIVE_PHASES,
-    filter: { incubator: params.incubator ?? null, thematique: params.thematique ?? null },
+    filter: {
+      incubator: params.incubator ?? null,
+      thematique: params.thematique ?? null,
+      category: categoryFilter ?? null,
+    },
     summary: {
       evaluated_count: evaluated.length,
       not_evaluated_count: notEvaluated.length,
@@ -222,6 +232,28 @@ async function list_standards_coverage(params: {
     },
     category_averages: categoryAverages,
     incubator_averages: incubatorAverages,
+    // When a specific category is requested, break down every evaluated
+    // startup of the population by its completion in that category, worst
+    // first — lets the LLM answer "qui n'a pas avancé sur la catégorie X ?".
+    by_category: categoryFilter
+      ? evaluated
+          .map((id) => {
+            const meta = startups.get(id) ?? EMPTY_META(id);
+            const val = byStartup.get(id)!.get(categoryFilter) ?? null;
+            return {
+              startup_id: id,
+              name: meta.name,
+              incubator: meta.incubator,
+              completion: val?.completion ?? null,
+              conformity: val?.conformity ?? null,
+            };
+          })
+          .sort(
+            (a, b) =>
+              (a.completion ?? -1) - (b.completion ?? -1) ||
+              (a.conformity ?? -1) - (b.conformity ?? -1),
+          )
+      : undefined,
     evaluated,
     not_evaluated: notEvaluated,
   };
@@ -236,6 +268,7 @@ function EMPTY_META(id: string): StartupMeta {
 async function standards_report(params: {
   incubator?: string;
   thematique?: string;
+  category?: string;
 }): Promise<string> {
   const byStartup = readEvaluations();
   const startups = readStartups();
@@ -245,13 +278,24 @@ async function standards_report(params: {
     category_averages: Record<string, number | null>;
     incubator_averages: Array<{ incubator: string; average: number | null; count: number }>;
     summary: { global_completion_average: number | null };
+    by_category?: Array<{
+      startup_id: string;
+      name: string;
+      incubator: string | null;
+      completion: number | null;
+      conformity: number | null;
+    }>;
   };
+  const categoryFilter = params.category
+    ? CATEGORIES.find((c) => c.toLowerCase() === params.category!.trim().toLowerCase())
+    : undefined;
 
   const lines: string[] = [];
   const title = [
     "Niveau des standards beta.gouv.fr",
     params.incubator ? ` — ${params.incubator}` : "",
     params.thematique ? ` — ${params.thematique}` : "",
+    categoryFilter ? ` — catégorie ${categoryFilter}` : "",
   ].join("");
   lines.push(`### ${title}`);
   lines.push("");
@@ -261,6 +305,21 @@ async function standards_report(params: {
     `**Moyenne globale (completion) :** ${coverage.summary.global_completion_average ?? "—"}%`,
   );
   lines.push("");
+
+  // When a specific category is requested, rank startups by progress in that
+  // category (worst first) so "qui n'a pas avancé ?" is answered directly.
+  if (categoryFilter && coverage.by_category) {
+    lines.push(`#### Avancement sur « ${categoryFilter} » (completion %)`);
+    lines.push("");
+    lines.push("| Rang | Startup | Completion | Conformity | Incubateur |");
+    lines.push("| --- | --- | --- | --- | --- |");
+    coverage.by_category.forEach((s, i) => {
+      lines.push(
+        `| ${i + 1} | ${s.name} | ${fmt(s.completion)}% | ${fmt(s.conformity)}% | ${s.incubator ?? "—"} |`,
+      );
+    });
+    lines.push("");
+  }
 
   // Detailed table: startup x category
   if (coverage.evaluated.length) {
@@ -374,7 +433,7 @@ const listCoverageTool: ChatCompletionTool = {
   function: {
     name: "list_standards_coverage",
     description:
-      "Renseigne l'état des évaluations standards des startups : startups évaluées, startups incubées actives NON évaluées, moyennes de completion par catégorie et par incubateur. Appel pour les questions du type « quelles startups n'ont pas rempli les standards ? », « lesquelles sont non évaluées sur l'écologie ? », « quel est le niveau moyen par incubateur ? ». Filtrable par incubateur (nom) et/ou thématique (ex: Écologie).",
+      "Renseigne l'état des évaluations standards des startups : startups évaluées, startups incubées actives NON évaluées, moyennes de completion par catégorie et par incubateur. Appel pour les questions du type « quelles startups n'ont pas rempli les standards ? », « lesquelles sont non évaluées sur l'écologie ? », « quel est le niveau moyen par incubateur ? ». Filtrable par incubateur (nom) et/ou thématique (ex: Écologie). Si on demande une catégorie précise (ex: « qui n'a pas avancé sur la sécurité ? »), passer le paramètre category : la réponse contient alors le détail par catégorie (completion/conformity) rangé des plus faibles aux plus forts.",
     parameters: {
       type: "object",
       properties: {
@@ -387,6 +446,11 @@ const listCoverageTool: ChatCompletionTool = {
           type: "string",
           description: "Filtre optionnel par thématique de startup (ex: Écologie, Santé, Justice…).",
         },
+        category: {
+          type: "string",
+          description:
+            "Filtre optionnel par catégorie de standards (ex: sécurité, accessibilité, vie-privée, qualité-logicielle, design, impact, transparence, qualité-du-support, équipe). À passer pour « qui n'a pas avancé sur la catégorie X ? ».",
+        },
       },
     },
   },
@@ -397,7 +461,7 @@ const reportTool: ChatCompletionTool = {
   function: {
     name: "standards_report",
     description:
-      "Produit un rapport markdown prêt à l'emploi du niveau des standards : tableau détaillé par startup et par catégorie (completion %), moyennes par incubateur, moyennes globales, et liste des startups non évaluées. À privilégier pour « donne-moi un tableau recap du niveau des standards par incubateur et par startup ». Filtrable par incubateur et/ou thématique.",
+      "Produit un rapport markdown prêt à l'emploi du niveau des standards : tableau détaillé par startup et par catégorie (completion %), moyennes par incubateur, moyennes globales, et liste des startups non évaluées. À privilégier pour « donne-moi un tableau recap du niveau des standards par incubateur et par startup ». Filtrable par incubateur et/ou thématique. Si on passe category (ex: sécurité), le rapport inclut un classement des startups par avancement dans cette catégorie.",
     parameters: {
       type: "object",
       properties: {
@@ -408,6 +472,10 @@ const reportTool: ChatCompletionTool = {
         thematique: {
           type: "string",
           description: "Filtre optionnel par thématique (ex: Écologie).",
+        },
+        category: {
+          type: "string",
+          description: "Filtre optionnel par catégorie de standards (ex: sécurité, accessibilité…).",
         },
       },
     },
@@ -430,11 +498,13 @@ export const handlers: Record<
     list_standards_coverage({
       incubator: (args["incubator"] as string) ?? undefined,
       thematique: (args["thematique"] as string) ?? undefined,
+      category: (args["category"] as string) ?? undefined,
     }),
   standards_report: (args) =>
     standards_report({
       incubator: (args["incubator"] as string) ?? undefined,
       thematique: (args["thematique"] as string) ?? undefined,
+      category: (args["category"] as string) ?? undefined,
     }),
 };
 
