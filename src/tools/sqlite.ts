@@ -25,6 +25,15 @@ Tables:
     thematique: 'Écologie'|'Administratif'|'Territoires'|'Travail / Emploi'|'Collectivités'|'Open-Data'|'Outil technique'|'Social'|'Jeunesse'|'Agriculture'|'Formation'|'Santé'|'Logement'|'Justice'|'Entreprises'|'Inclusion numérique'|'Démocratie'|'Transports'|'Patrimoine'|'Education'|'Sécurité informatique'|'Mer'|'Culture'|'cybersécurité'|'Sport'|'Intelligence artificielle'
   startup_technos(startup_id, techno)
     techno: 'angular'|'css'|'django'|'docker'|'express'|'fastapi'|'flask'|'git'|'grist'|'html'|'java'|'javascript'|'kubernetes'|'LLM'|'MDX'|'mongodb'|'next.js'|'NodeJS'|'php'|'PostgreSQL'|'publi.codes'|'Python'|'rails'|'React'|'ruby'|'sql'|'symfony'|'tailwindcss'|'terraform'|'TypeScript'|'vue'
+  standards_evaluations(startup_id, category, completion, conformity)
+    category: 'accessibilité'|'design'|'impact'|'qualité-du-support'|'qualité-logicielle'|'sécurité'|'transparence'|'vie-privée'|'équipe'
+    completion: pourcentage de critères effectivement remplis (0-100) — métrique de « niveau » par défaut
+    conformity: pourcentage de critères conformes (0-100)
+    Les startups concernées sont celles présentes dans cette table. Pour « qui n'a pas rempli les standards »,
+    soustraire ces startup_id de la population des startups incubées actives (current_phase IN
+    'construction','acceleration','consolidation','opere').
+  vue aide: les catégories sont identiques entre les 9 catégories des standards (cf. les-standards) et les
+    catégories de cette table.
 `;
 
 let _db: DatabaseSync | null = null;

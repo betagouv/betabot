@@ -62,6 +62,17 @@ interface StartupDetail {
   expired_members?: string[];
 }
 
+interface StandardsCategories {
+  [category: string]: number;
+}
+
+interface StandardsEvaluation {
+  completion: StandardsCategories;
+  conformity: StandardsCategories;
+}
+
+type StandardsEvaluations = Record<string, StandardsEvaluation>;
+
 console.log("betabot — build-db");
 console.log("==================");
 const t0 = Date.now();
@@ -134,6 +145,15 @@ db.exec(`
     startup_id TEXT,
     techno TEXT
   );
+
+  CREATE TABLE standards_evaluations (
+    startup_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    completion REAL,
+    conformity REAL,
+    PRIMARY KEY (startup_id, category)
+  );
+  CREATE INDEX idx_se_startup ON standards_evaluations(startup_id);
 `);
 
 // ─── Members ──────────────────────────────────────────────────────────────────
@@ -288,6 +308,41 @@ try {
   throw e;
 }
 console.log(`  ✓ ${Object.keys(details).length} startup team records`);
+
+// ─── Standards evaluations ───────────────────────────────────────────────────
+
+console.log("\n[5/5] Loading standards evaluations…");
+const standardsPath = path.join(DATA_DIR, "API/standards-evaluations.json");
+const standardsEvals = fs.existsSync(standardsPath)
+  ? readJson<StandardsEvaluations>(standardsPath)
+  : {};
+
+const insertStandard = db.prepare(
+  "INSERT OR REPLACE INTO standards_evaluations VALUES (?, ?, ?, ?)"
+);
+
+db.exec("BEGIN");
+try {
+  for (const [startupId, evalData] of Object.entries(standardsEvals)) {
+    const categories = new Set([
+      ...Object.keys(evalData.completion ?? {}),
+      ...Object.keys(evalData.conformity ?? {}),
+    ]);
+    for (const category of categories) {
+      insertStandard.run(
+        startupId,
+        category,
+        evalData.completion?.[category] ?? null,
+        evalData.conformity?.[category] ?? null
+      );
+    }
+  }
+  db.exec("COMMIT");
+} catch (e) {
+  db.exec("ROLLBACK");
+  throw e;
+}
+console.log(`  ✓ ${Object.keys(standardsEvals).length} evaluated startups`);
 
 db.close();
 
