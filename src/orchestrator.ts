@@ -53,6 +53,10 @@ import {
   handlers as changelogStartupsHandlers,
 } from "./tools/changelog-startups.js";
 import {
+  tools as standardsTools,
+  handlers as standardsHandlers,
+} from "./tools/standards.js";
+import {
   tools as messagerieDocTools,
   handlers as messagerieDocHandlers,
 } from "./tools/docs-messagerie.js";
@@ -114,6 +118,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...messagerieDocTools,
   ...tchapDocTools,
   ...feedbackTools,
+  ...standardsTools,
 ];
 
 const ALL_HANDLERS: Record<
@@ -137,6 +142,7 @@ const ALL_HANDLERS: Record<
   ...messagerieDocHandlers,
   ...tchapDocHandlers,
   ...feedbackHandlers,
+  ...standardsHandlers,
 };
 
 export class Orchestrator {

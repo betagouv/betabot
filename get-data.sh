@@ -7,6 +7,7 @@ curl https://beta.gouv.fr/api/v2.6/authors.json -o "$DATA_DIR/API/members.json"
 curl https://beta.gouv.fr/api/v2.6/startups.json -o "$DATA_DIR/API/startups.json"
 curl https://beta.gouv.fr/api/v2.6/startups_details.json -o "$DATA_DIR/API/startups_details.json"
 curl https://beta.gouv.fr/api/v2.6/incubators.json -o "$DATA_DIR/API/incubators.json"
+curl https://standards.beta.gouv.fr/api/evaluations -o "$DATA_DIR/API/standards-evaluations.json"
 
 if [ -d "$DATA_DIR/gitscan" ]; then
   git -C "$DATA_DIR/gitscan" pull

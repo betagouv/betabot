@@ -24,6 +24,7 @@ Three-phase pipeline: **fetch** raw data (`get-data.sh`), **embed** into search 
 | `data/API/startups.json`         | `https://beta.gouv.fr/api/v2.6/startups.json`         |
 | `data/API/startups_details.json` | `https://beta.gouv.fr/api/v2.6/startups_details.json` |
 | `data/API/incubators.json`       | `https://beta.gouv.fr/api/v2.6/incubators.json`       |
+| `data/API/standards-evaluations.json` | `https://standards.beta.gouv.fr/api/evaluations` (dict `{ startup_slug: { completion, conformity } }` — tous les scores standards en 1 snapshot offline) |
 
 ### Git repos (shallow clone / pull)
 
@@ -381,7 +382,7 @@ Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt,
 npm run build-db
 ```
 
-Reads JSON data files and creates `data/betabot.db`. Overwrites any existing DB. Uses `node:sqlite` built-in (Node 24 — no extra dependency). Four sequential jobs, each wrapped in a transaction.
+Reads JSON data files and creates `data/betabot.db`. Overwrites any existing DB. Uses `node:sqlite` built-in (Node 24 — no extra dependency). Five sequential jobs, each wrapped in a transaction.
 
 ### Schema
 
@@ -406,6 +407,15 @@ CREATE TABLE startup_members (startup_id TEXT, member_id TEXT, status TEXT);
   -- status: 'active' | 'previous' | 'expired'
 CREATE TABLE startup_thematiques (startup_id TEXT, thematique TEXT);
 CREATE TABLE startup_technos (startup_id TEXT, techno TEXT);
+
+CREATE TABLE standards_evaluations (
+  startup_id TEXT NOT NULL,
+  category TEXT NOT NULL,       -- accessibilité, design, impact, qualité-du-support, qualité-logicielle, sécurité, transparence, vie-privée, équipe
+  completion REAL,              -- % de critères effectivement remplis (métrique de « niveau » par défaut)
+  conformity REAL,              -- % de critères conformes
+  PRIMARY KEY (startup_id, category)
+);
+-- Une ligne par startup × catégorie. Les startups absentes n'ont pas commencé d'évaluation.
 ```
 
 ### Job 1 — Members
@@ -432,6 +442,12 @@ Source: `data/API/startups.json` (JSONAPI — `data[].attributes` + `data[].rela
 Source: `data/API/startups_details.json` (dict keyed by startup slug, fields: `active_members[]`, `previous_members[]`, `expired_members[]`)
 
 Inserts rows into `startup_members` with status `active`, `previous`, or `expired`. Updates `startups.active_member_count`.
+
+### Job 5 — Standards evaluations
+
+Source: `data/API/standards-evaluations.json` (dict keyed by startup slug, fields: `completion{cat:%}`, `conformity{cat:%}`).
+
+Skips the whole job if the file does not exist. Inserts one row per startup × category into `standards_evaluations` (`completion` / `conformity`). Startups absent from the dict simply don't appear in the table — that's how "pas commencé l'évaluation" is determined at query time (LEFT JOIN against `startups` filtered on the active incubated phases).
 
 ---
 

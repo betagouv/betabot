@@ -24,6 +24,9 @@ Detailed specs : [./specs](./specs)
 - _Comment accéder à la messagerie numerique.gouv.fr ?_
 - _Comment créer un salon sur Tchap ?_
 - _Est-ce que Tchap chiffre les messages de bout en bout ?_
+- _Quel est le niveau des standards beta de l'équipe domifa ?_
+- _Quelles startups n'ont pas rempli les standards ?_ (évaluations standards en cache local)
+- _Donne-moi un tableau recap du niveau des standards par incubateur et par startup_
 - _Quelles offres d'emploi sont disponibles sur WelcomeKit ?_
 - _Y a-t-il des postes de développeur en télétravail ?_
 - _Quelles offres d'emploi de la fonction publique sont disponibles sur Choisir le service public ?_
