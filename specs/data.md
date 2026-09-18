@@ -374,6 +374,18 @@ Outputs: `data/docs-tchap/docs.embeddings.bin`, `data/docs-tchap/docs.bm25.json`
 
 Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt, url? }`).
 
+### Job 14 — Tchap channels
+
+Source: the JSON file pointed to by `TCHAP_CHANNELS`, a list of `{ url, name, description }` where `url` is the full Tchap room link (`https://<host>/#/room/!<id>:<homeserver>`). Skipped if the env var is unset, the file is missing, or the list is empty (use `[]` for development).
+
+One embedding + BM25 doc per channel built over `name + description` (same pattern as the members/startups jobs — no chunking).
+
+Outputs: `data/channels.embeddings.bin`, `data/channels.bm25.json`, `data/channels.index.json`
+
+Index entry type: `TchapChannel` — `{ url, name, description }`.
+
+Used at runtime by `findChannels()` (`src/tchap-channels.ts`) with hybrid retrieval; related channels are injected into the system prompt after entity detection so the answer can include direct `[name](url)` links.
+
 ---
 
 ## Phase 3 — SQLite database (`build-db.ts`)

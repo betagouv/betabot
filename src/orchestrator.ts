@@ -70,9 +70,13 @@ import {
   type ToolContext,
 } from "./tools/feedback.js";
 import { detectEntities, type DetectedEntities } from "./entity-detector.js";
+import { findChannels, type TchapChannel } from "./tchap-channels.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
 
-function buildSystemPrompt(entities: DetectedEntities): string {
+export function buildSystemPrompt(
+  entities: DetectedEntities,
+  channels: TchapChannel[] = [],
+): string {
   const now = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
   const timeContext = `Nous sommes le ${now}.\n\n`;
   const lines: string[] = [];
@@ -86,6 +90,15 @@ function buildSystemPrompt(entities: DetectedEntities): string {
     lines.push("Startups détectées dans la question :");
     entities.startups.forEach((e) =>
       lines.push(`  - ${e.label} : slug="${e.id}", url=${e.url}`),
+    );
+  }
+  if (channels.length) {
+    lines.push(
+      "Canaux Tchap liés à cette question — si l'un d'eux est pertinent, " +
+        "ajoute son lien direct dans ta réponse, au format [name](url) :",
+    );
+    channels.forEach((c) =>
+      lines.push(`  - ${c.name} : ${c.description} ${c.url}`),
     );
   }
   if (!lines.length) return timeContext + SYSTEM_PROMPT;
@@ -228,8 +241,17 @@ export class Orchestrator {
           `${startupCount} startup(s) [${detectedEntities.startups.map((e) => e.id).join(", ")}]`,
       );
     }
+    const relatedChannels = await findChannels(input.text);
+    if (relatedChannels.length) {
+      debug(
+        `tchap channels: [${relatedChannels.map((c) => c.name).join(", ")}]`,
+      );
+    }
     const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: buildSystemPrompt(detectedEntities) },
+      {
+        role: "system",
+        content: buildSystemPrompt(detectedEntities, relatedChannels),
+      },
       ...history,
     ];
 
