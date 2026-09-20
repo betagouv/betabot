@@ -30,7 +30,14 @@ rl.on("line", async (line) => {
       roomId: "cli",
       text,
     });
-    console.log(`\nbetabot > ${response}\n`);
+    console.log(`\nbetabot > ${response.text}\n`);
+    for (const att of response.attachments) {
+      // Surface attachment in the CLI; content is in-memory only.
+      console.log(
+        `  [jalon] ${att.filename} (${att.mimeType}, ${Buffer.byteLength(att.content, "utf8")} o)`,
+      );
+    }
+    if (response.attachments.length) console.log("");
     orchestrator.clearHistory("cli");
   } catch (err) {
     console.error("Erreur:", err);

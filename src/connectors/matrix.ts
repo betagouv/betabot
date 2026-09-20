@@ -10,6 +10,7 @@ import {
 import { marked } from "marked";
 import { config } from "../config.js";
 import type { Orchestrator } from "../orchestrator.js";
+import type { Attachment } from "../attachments.js";
 
 const _require = createRequire(import.meta.url);
 
@@ -726,9 +727,18 @@ export class MatrixConnector {
       })
       .then(async (response) => {
         const replyText =
-          response.trim() || "_(Désolé, je n'ai pas pu générer de réponse.)_";
+          response.text.trim() ||
+          "_(Désolé, je n'ai pas pu générer de réponse.)_";
 
         await this.sendMessage(roomId, replyText, userEventId, threadRoot);
+
+        for (const attachment of response.attachments) {
+          try {
+            await this.sendFile(roomId, attachment, threadRoot);
+          } catch (err) {
+            console.error("[Matrix] Failed to send attachment:", err);
+          }
+        }
       })
       .catch(async (err: unknown) => {
         console.error("[Matrix] Orchestrator error:", err);
@@ -800,6 +810,63 @@ export class MatrixConnector {
     } else if (replyToEventId) {
       content["m.relates_to"] = {
         "m.in_reply_to": { event_id: replyToEventId },
+      };
+    }
+
+    await this.client.sendEvent(roomId, "m.room.message", content);
+  }
+
+  /**
+   * Send a file attachment to a room. In E2EE rooms the file content is
+   * encrypted (attachment-level, via encryptMedia) before upload, and the outer
+   * m.room.message event is Megolm-encrypted by sendEvent.
+   */
+  private async sendFile(
+    roomId: string,
+    attachment: Attachment,
+    threadRootId?: string,
+  ): Promise<void> {
+    const buffer = Buffer.from(attachment.content, "utf8");
+    const info = {
+      mimetype: attachment.mimeType,
+      size: buffer.length,
+    };
+
+    const content: Record<string, unknown> = {
+      msgtype: "m.file",
+      body: attachment.filename,
+      filename: attachment.filename,
+      info,
+    };
+
+    const isEncrypted =
+      (await this.client.crypto?.isRoomEncrypted(roomId)) ?? false;
+    if (isEncrypted && this.client.crypto) {
+      const { buffer: encBuffer, file } = await this.client.crypto.encryptMedia(
+        buffer,
+      );
+      const url = await this.client.uploadContent(
+        encBuffer,
+        attachment.mimeType,
+        attachment.filename,
+      );
+      content.file = { ...file, url };
+      content.url = url;
+    } else {
+      const url = await this.client.uploadContent(
+        buffer,
+        attachment.mimeType,
+        attachment.filename,
+      );
+      content.url = url;
+    }
+
+    if (threadRootId) {
+      content["m.relates_to"] = {
+        rel_type: "m.thread",
+        event_id: threadRootId,
+        "m.in_reply_to": { event_id: threadRootId },
+        is_falling_back: false,
       };
     }
 

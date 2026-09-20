@@ -1,5 +1,6 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
+import type { Attachment } from "../attachments.js";
 
 export interface ConversationMessage {
   role: string;
@@ -9,6 +10,8 @@ export interface ConversationMessage {
 export interface ToolContext {
   userId: string;
   conversation: ConversationMessage[];
+  /** Buffer for files the bot will attach to its response. */
+  attachments?: Attachment[];
 }
 
 interface FeedbackPayload {
