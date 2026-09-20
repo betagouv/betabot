@@ -24,7 +24,7 @@ Conversation key: `"${roomId}:${threadId ?? 'root'}"` — distinct per Matrix th
 
 ## Loop
 
-0. **Entity pre-pass:** Run `detectEntities(text)` (`src/entity-detector.ts`) — synchronous, no LLM or embedding call. Uses runtime token-lookup maps built from member fullnames/IDs and startup names/slugs. Score = count of entity name tokens found in the query; threshold ≥ 1 matching token, top 3 per type, ranked by coverage ratio. Debug output to stderr via `[entity-detector]` prefix. Returns `{members:[], startups:[]}` silently on any error.
+0. **Entity pre-pass:** Run `detectEntities(text)` (`src/entity-detector.ts`) — synchronous, no LLM or embedding call. Uses runtime token-lookup maps built from member fullnames/IDs and startup names/slugs. Score = count of entity name tokens found in the query; threshold ≥ 1 matching token, top 3 per type, ranked by coverage ratio. Debug output to stderr via `[entity-detector]` prefix. Returns `{members:[], startups:[]}` silently on any error. In parallel (`Promise.all`), run `findChannels(text)` (`src/tchap-channels.ts`) and `findFaqAnswers(text)` (`src/faq.ts`), both via hybrid retrieval with inoffensive `[]` fallbacks when their indexes are missing.
 1. Append user message to history.
 2. Build `messages = [system (+ optional entity context), ...history]`.
 3. Call `chat.completions.create` with all tools, `tool_choice: "auto"`.
@@ -41,6 +41,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 - For statistical/aggregation questions (counts, rankings, distributions) prefer `query_data` over chaining semantic searches.
 - For "actualité" questions use: calendar, doc updates, PeerTube videos, org changelogs.
 - For email/DNS configuration questions (MX, DKIM, DMARC, SPF, messagerie) use `search_docs_messagerie` in addition to `search_docs`.
+- When FAQ reference answers are injected in the context, they are authoritative: base the answer on them and cite their sources in priority when the question matches.
 - Entity linking rules (always add a link when mentioning):
   - Startup → `https://beta.gouv.fr/startups/[ghid]`
   - Member → `https://espace-membre.beta.gouv.fr/community/[username]`

@@ -109,6 +109,7 @@ Sources and their index locations:
 | Choisir le service public jobs | `data/choisirleservicepublic/jobs` | `data/choisirleservicepublic/jobs.index.json` |
 | Messagerie docs      | `data/docs-messagerie/docs`         | `data/docs-messagerie/docs.index.json`         |
 | Tchap docs           | `data/docs-tchap/docs`              | `data/docs-tchap/docs.index.json`              |
+| FAQ (reference answers) | `data/faq/docs`                 | `data/faq/docs.index.json`                     |
 
 ---
 
