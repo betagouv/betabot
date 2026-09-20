@@ -41,6 +41,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 - For statistical/aggregation questions (counts, rankings, distributions) prefer `query_data` over chaining semantic searches.
 - For "actualité" questions use: calendar, doc updates, PeerTube videos, org changelogs.
 - For email/DNS configuration questions (MX, DKIM, DMARC, SPF, messagerie) use `search_docs_messagerie` in addition to `search_docs`.
+- For classic community questions (espace membre, accès aux outils, emails @beta.gouv.fr, fiches produits, onboarding, accès aux services numériques) use `search_docs_betagouv_faq`.
 - Entity linking rules (always add a link when mentioning):
   - Startup → `https://beta.gouv.fr/startups/[ghid]`
   - Member → `https://espace-membre.beta.gouv.fr/community/[username]`
@@ -51,6 +52,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
   - FranceConnect doc → use `url` from search result if available, else `https://docs.partenaires.franceconnect.gouv.fr/[PATH]`
   - DSFR doc → use `url` from search result if available, else `https://www.systeme-de-design.gouv.fr/[PATH]`
   - Messagerie doc → use `url` from search result
+  - FAQ beta.gouv.fr → use `url` from search result if available, else `https://faq-betagouv.crisp.help/fr/`
   - Standard → `https://github.com/betagouv/standards/blob/main/[categorie]/[standard]`
 - Cite sources; standard footer links available (doc, espace-membre, beta.gouv.fr, standards).
 
@@ -71,6 +73,7 @@ History is trimmed to `MAX_HISTORY = 20` messages after each turn (user + assist
 | `tools/docs-dsfr.ts`         | `search_docs_dsfr`, `get_doc_dsfr_page`                        |
 | `tools/docs-messagerie.ts`   | `search_docs_messagerie`, `get_doc_messagerie_page`            |
 | `tools/docs-tchap.ts`        | `search_docs_tchap`, `get_doc_tchap_page`                      |
+| `tools/docs-betagouv-faq.ts` | `search_docs_betagouv_faq`, `get_doc_betagouv_faq_page`        |
 | `tools/wttj.ts`              | `search_wttj_jobs`, `get_wttj_job_page`                        |
 | `tools/choisirleservicepublic.ts` | `search_choisirleservicepublic_jobs`, `get_choisirleservicepublic_job_detail` |
 | `tools/changelog-startups.ts`| `get_startup_updates`                                          |

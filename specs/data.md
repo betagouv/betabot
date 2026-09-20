@@ -43,7 +43,8 @@ Generic TypeScript crawler using **crawlee** + **@mozilla/readability** + **turn
 | `data/docs-proconnect/*.md`               | `https://partenaires.proconnect.gouv.fr/docs` (crawled)                     |
 | `data/docs-franceconnect/*.md`            | `https://docs.partenaires.franceconnect.gouv.fr` (crawled)                  |
 | `data/docs-dsfr/premiers-pas/*.md`        | `https://www.systeme-de-design.gouv.fr/…/premiers-pas` (crawled)            |
-| `data/docs-dsfr/fondamentaux/*.md`        | `https://www.systeme-de-design.gouv.fr/…/fondamentaux` (crawled)            |
+| `data/docs-tchap/*.md`                     | `https://aide.tchap.numerique.gouv.fr/fr/` (crawled)                    |
+| `data/faq-betagouv/*.md`                   | `https://faq-betagouv.crisp.help/fr/` (crawled)                         |
 
 To add future web-crawled sources, add another `npx tsx fetch-docs.ts <url> <output-dir>` call to `get-data.sh` and a matching embedding job + tool.
 
@@ -168,7 +169,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Thirteen sequential jobs. Each job:
+Fifteen sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -385,6 +386,16 @@ Outputs: `data/channels.embeddings.bin`, `data/channels.bm25.json`, `data/channe
 Index entry type: `TchapChannel` — `{ url, name, description }`.
 
 Used at runtime by `findChannels()` (`src/tchap-channels.ts`) with hybrid retrieval; related channels are injected into the system prompt after entity detection so the answer can include direct `[name](url)` links.
+
+### Job 15 — beta.gouv.fr FAQ
+
+Source: all `.md` files under `data/faq-betagouv/` (written by `fetch-docs.ts` on https://faq-betagouv.crisp.help/fr/). Skipped entirely if directory does not exist.
+
+Same chunking and embedding strategy as Job 4: front matter intro chunk (from `description` if present) and section chunks from `extractSections`.
+
+Outputs: `data/faq-betagouv/docs.embeddings.bin`, `data/faq-betagouv/docs.bm25.json`, `data/faq-betagouv/docs.index.json`
+
+Index entry type: same `DocChunk` as Job 4 (`{ path, title, breadcrumb, excerpt, url? }`).
 
 ---
 

@@ -65,6 +65,10 @@ import {
   handlers as tchapDocHandlers,
 } from "./tools/docs-tchap.js";
 import {
+  tools as betagouvFaqTools,
+  handlers as betagouvFaqHandlers,
+} from "./tools/docs-betagouv-faq.js";
+import {
   tools as feedbackTools,
   handlers as feedbackHandlers,
   type ToolContext,
@@ -130,6 +134,7 @@ const ALL_TOOLS: ChatCompletionTool[] = [
   ...changelogStartupsTools,
   ...messagerieDocTools,
   ...tchapDocTools,
+  ...betagouvFaqTools,
   ...feedbackTools,
   ...standardsTools,
 ];
@@ -154,6 +159,7 @@ const ALL_HANDLERS: Record<
   ...changelogStartupsHandlers,
   ...messagerieDocHandlers,
   ...tchapDocHandlers,
+  ...betagouvFaqHandlers,
   ...feedbackHandlers,
   ...standardsHandlers,
 };
