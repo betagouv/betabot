@@ -72,6 +72,11 @@ import {
 import { detectEntities, type DetectedEntities } from "./entity-detector.js";
 import { findChannels, type TchapChannel } from "./tchap-channels.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
+import {
+  buildReportAttachments,
+  isReportLike,
+  type Attachment,
+} from "./attachments.js";
 
 export function buildSystemPrompt(
   entities: DetectedEntities,
@@ -199,7 +204,7 @@ export class Orchestrator {
     threadId?: string;
     text: string;
     context?: string;
-  }): Promise<string> {
+  }): Promise<{ text: string; attachments: Attachment[] }> {
     const key = this.getConversationKey(input.roomId, input.threadId);
     const history = this.getHistory(key);
 
@@ -260,6 +265,7 @@ export class Orchestrator {
     ];
 
     let iterations = 0;
+    const attachments: Attachment[] = [];
 
     while (iterations < MAX_TOOL_ITERATIONS) {
       iterations++;
@@ -323,7 +329,7 @@ export class Orchestrator {
           debug(`final response (${text.length} chars)`);
           history.push({ role: "assistant", content: text });
           this.trimHistory(history);
-          return text;
+          return this.finalize(text, attachments);
         }
         // LLM stopped but returned no content — ask it to summarize what it found
         debug(`empty response after stop, requesting summary`);
@@ -339,6 +345,7 @@ export class Orchestrator {
           content:
             typeof m.content === "string" ? m.content : JSON.stringify(m.content),
         })),
+        attachments,
       };
       const toolResults: ChatCompletionToolMessageParam[] = await Promise.all(
         assistantMessage.tool_calls
@@ -418,6 +425,17 @@ export class Orchestrator {
     debug(`fallback final response (${text.length} chars)`);
     history.push({ role: "assistant", content: text });
     this.trimHistory(history);
-    return text;
+    return this.finalize(text, attachments);
+  }
+
+  /** Attach .md/.html files when the answer looks like a report. */
+  private finalize(
+    text: string,
+    attachments: Attachment[],
+  ): { text: string; attachments: Attachment[] } {
+    if (attachments.length === 0 && isReportLike(text)) {
+      attachments.push(...buildReportAttachments(text));
+    }
+    return { text, attachments };
   }
 }

@@ -2,6 +2,8 @@ import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import type { ChatCompletionTool } from "openai/resources/chat/completions.js";
 import { config } from "../config.js";
+import { toCsv, type Attachment } from "../attachments.js";
+import type { ToolContext } from "./feedback.js";
 
 const DB_PATH = path.join(config.dataDir, "betabot.db");
 
@@ -51,18 +53,44 @@ export function reset(): void {
   _db = null;
 }
 
-async function query_data(sql: string): Promise<unknown> {
+async function query_data(
+  sql: string,
+  context: ToolContext,
+): Promise<unknown> {
   const normalized = sql.trim().replace(/\s+/g, " ").toUpperCase();
   if (!normalized.startsWith("SELECT") && !normalized.startsWith("WITH")) {
     return { error: "Only SELECT (or WITH … SELECT) queries are allowed." };
   }
   try {
     const stmt = getDb().prepare(sql);
-    const rows = stmt.all() as unknown[];
+    const rows = stmt.all() as Array<Record<string, unknown>>;
+    // Keep the full result for the CSV attachment (no 200-row cap)…
+    if (rows.length && context.attachments) {
+      const slug = querySlug(sql, rows);
+      const attachment: Attachment = {
+        filename: `${slug}.csv`,
+        mimeType: "text/csv",
+        content: toCsv(rows),
+      };
+      context.attachments.push(attachment);
+    }
+    // …but only expose a bounded slice in the LLM context.
     return rows.slice(0, 200);
   } catch (err) {
     return { error: String(err) };
   }
+}
+
+/** Derive a short, stable file slug from the SQL query. */
+function querySlug(
+  sql: string,
+  rows: Array<Record<string, unknown>>,
+): string {
+  const first = /^\s*select\s+([a-z0-9_]+)/i.exec(sql);
+  const from = /from\s+([a-z0-9_]+)/i.exec(sql);
+  const base = first?.[1] ?? from?.[1] ?? "data";
+  const size = rows.length.toLocaleString("en-US").replace(/,/g, "_");
+  return `${base}_${size}`;
 }
 
 const queryDataTool: ChatCompletionTool = {
@@ -90,7 +118,7 @@ export const tools = [queryDataTool];
 
 export const handlers: Record<
   string,
-  (args: Record<string, unknown>) => Promise<unknown>
+  (args: Record<string, unknown>, context: ToolContext) => Promise<unknown>
 > = {
-  query_data: (args) => query_data(args["sql"] as string),
+  query_data: (args, context) => query_data(args["sql"] as string, context),
 };
