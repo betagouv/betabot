@@ -810,12 +810,30 @@ export class MatrixConnector {
     threadRootId: string,
   ): Promise<string | undefined> {
     try {
+      const lines: string[] = [];
+
+      // The m.thread relations endpoint only returns the child replies, never
+      // the thread root. Fetch the root event explicitly so the original
+      // question (which is often the root message) is always part of the
+      // context passed to the LLM.
+      const root = await this.client.getRawEvent(roomId, threadRootId);
+      if (root.type === "m.room.message") {
+        const rootContent = root.content as {
+          msgtype?: string;
+          body?: string;
+        };
+        if (rootContent.msgtype === "m.text") {
+          const name =
+            root.sender.replace(/^@/, "").split(":")[0] ?? "inconnu";
+          lines.push(`- (message initial du fil) ${name} : ${rootContent.body}`);
+        }
+      }
+
       const { chunk } = await this.client.getRelationsForEvent(
         roomId,
         threadRootId,
         "m.thread",
       );
-      const lines: string[] = [];
       for (const msg of chunk as Array<Record<string, unknown>>) {
         if (msg.type !== "m.room.message") continue;
         const evt = msg as {
@@ -828,8 +846,9 @@ export class MatrixConnector {
         lines.push(`- ${name} : ${evt.content.body}`);
         if (lines.length >= 20) break;
       }
+
       if (!lines.length) return undefined;
-      return `Voici le fil de discussion existant (pour contexte) :\n${lines.join("\n")}`;
+      return `Voici le fil de discussion (pour contexte). Le message initial du fil est la question à laquelle tu dois répondre :\n${lines.join("\n")}`;
     } catch (err) {
       console.error("[Matrix] Failed to read thread context:", err);
       return undefined;
