@@ -18,6 +18,7 @@ export const config = {
     timeoutMs: optionalInt("OPENAI_TIMEOUT_MS", 30_000),
   },
   dataDir: optional("DATA_DIR", "./data"),
+  tchapChannels: optional("TCHAP_CHANNELS", ""),
   calendarIcsUrl: optional("CALENDAR_ICS_URL", ""),
   feedbackWebhookUrl: optional("FEEDBACK_WEBHOOK_URL", ""),
   matrix: {

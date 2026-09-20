@@ -244,7 +244,7 @@ function writeJson(filePath: string, data: unknown): void {
 // ─── Job 1: Members ───────────────────────────────────────────────────────────
 
 async function buildMembersEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[1/13] Building members embeddings…");
+  console.log("\n[1/14] Building members embeddings…");
   const members = readJson<MemberEntry[]>(
     path.join(DATA_DIR, "index/members.json"),
   );
@@ -273,7 +273,7 @@ async function buildMembersEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 2: Startups index ───────────────────────────────────────────────────
 
 async function buildStartupsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[2/13] Building startups index embeddings…");
+  console.log("\n[2/14] Building startups index embeddings…");
   const startups = readJson<StartupEntry[]>(
     path.join(DATA_DIR, "index/startups.json"),
   );
@@ -296,7 +296,7 @@ async function buildStartupsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 3: Gitscan repos ────────────────────────────────────────────────────
 
 async function buildReposEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[3/13] Building gitscan repos embeddings…");
+  console.log("\n[3/14] Building gitscan repos embeddings…");
   const reposDir = path.join(DATA_DIR, "gitscan/repos");
   const entries: RepoEntry[] = [];
   const texts: string[] = [];
@@ -458,7 +458,7 @@ async function buildMdDocsEmbeddings(
 // ─── Job 4: Docs ─────────────────────────────────────────────────────────────
 
 async function buildDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[4/13] Building docs embeddings…");
+  console.log("\n[4/14] Building docs embeddings…");
   const docsDir = path.join(DATA_DIR, "doc.incubateur.net");
   await buildMdDocsEmbeddings(
     "doc",
@@ -472,7 +472,7 @@ async function buildDocsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 5: PeerTube videos ───────────────────────────────────────────────────
 
 async function buildVideosEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[5/13] Building PeerTube videos embeddings…");
+  console.log("\n[5/14] Building PeerTube videos embeddings…");
   const peertubeDir = path.join(DATA_DIR, "peertube");
 
   if (!fs.existsSync(peertubeDir)) {
@@ -539,7 +539,7 @@ async function buildVideosEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 7: ProConnect docs ──────────────────────────────────────────────────
 
 async function buildProconnectDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[7/13] Building ProConnect docs embeddings…");
+  console.log("\n[7/14] Building ProConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-proconnect");
   await buildMdDocsEmbeddings(
     "ProConnect",
@@ -553,7 +553,7 @@ async function buildProconnectDocsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 6: Incubators ───────────────────────────────────────────────────────
 
 async function buildIncubatorsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[6/13] Building incubators embeddings…");
+  console.log("\n[6/14] Building incubators embeddings…");
   const raw = readJson<Record<string, RawIncubator>>(
     path.join(DATA_DIR, "API/incubators.json"),
   );
@@ -602,7 +602,7 @@ async function buildIncubatorsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 8: FranceConnect docs ───────────────────────────────────────────────
 
 async function buildFranceconnectDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[8/13] Building FranceConnect docs embeddings…");
+  console.log("\n[8/14] Building FranceConnect docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-franceconnect");
   await buildMdDocsEmbeddings(
     "FranceConnect",
@@ -616,7 +616,7 @@ async function buildFranceconnectDocsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 9: DSFR docs ────────────────────────────────────────────────────────
 
 async function buildDsfrDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[9/13] Building DSFR docs embeddings…");
+  console.log("\n[9/14] Building DSFR docs embeddings…");
   const baseDir = path.join(DATA_DIR, "docs-dsfr");
   const subdirs = ["premiers-pas", "fondamentaux"].map((s) =>
     path.join(baseDir, s),
@@ -633,7 +633,7 @@ async function buildDsfrDocsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 10: WTTJ job offers ─────────────────────────────────────────────────
 
 async function buildWttjEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[10/13] Building WTTJ job offers embeddings…");
+  console.log("\n[10/14] Building WTTJ job offers embeddings…");
   const baseDir = path.join(DATA_DIR, "wttj");
   if (!fs.existsSync(baseDir)) {
     console.log("  ⚠ wttj directory not found, skipping");
@@ -664,7 +664,7 @@ async function buildChoisirLeServicePublicEmbeddings(
   cache: Map<string, number[]>,
 ) {
   console.log(
-    "\n[11/13] Building Choisir le service public job offers embeddings…",
+    "\n[11/14] Building Choisir le service public job offers embeddings…",
   );
   const dir = path.join(DATA_DIR, "choisirleservicepublic");
   if (!fs.existsSync(dir)) {
@@ -727,7 +727,7 @@ async function buildChoisirLeServicePublicEmbeddings(
 // ─── Job 12: Messagerie docs ─────────────────────────────────────────────────
 
 async function buildMessagerieDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[12/13] Building messagerie docs embeddings…");
+  console.log("\n[12/14] Building messagerie docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-messagerie");
   await buildMdDocsEmbeddings(
     "messagerie",
@@ -741,7 +741,7 @@ async function buildMessagerieDocsEmbeddings(cache: Map<string, number[]>) {
 // ─── Job 13: Tchap docs ──────────────────────────────────────────────────────
 
 async function buildTchapDocsEmbeddings(cache: Map<string, number[]>) {
-  console.log("\n[13/13] Building Tchap docs embeddings…");
+  console.log("\n[13/14] Building Tchap docs embeddings…");
   const dir = path.join(DATA_DIR, "docs-tchap");
   await buildMdDocsEmbeddings(
     "Tchap",
@@ -750,6 +750,50 @@ async function buildTchapDocsEmbeddings(cache: Map<string, number[]>) {
     cache,
     "No Tchap doc files found",
   );
+}
+
+// ─── Job 14: Tchap channels ──────────────────────────────────────────────────
+
+interface TchapChannel {
+  url: string;
+  name: string;
+  description: string;
+}
+
+/**
+ * Embeds the Tchap channels listed in the JSON file pointed to by TCHAP_CHANNELS
+ * ({ url, name, description }[]). One embedding + BM25 doc per channel built over
+ * `name + description`. Outputs land in DATA_DIR as channels.embeddings.bin,
+ * channels.bm25.json and channels.index.json. Skips silently when the file is
+ * unset or empty (development).
+ */
+async function buildTchapChannelsEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[14/14] Building Tchap channels embeddings…");
+  const channelsPath = process.env["TCHAP_CHANNELS"];
+  if (!channelsPath || !fs.existsSync(channelsPath)) {
+    console.log("  ⚠ TCHAP_CHANNELS unset or missing, skipping");
+    return;
+  }
+  const channels = readJson<TchapChannel[]>(channelsPath);
+  if (channels.length === 0) {
+    console.log("  ⚠ No Tchap channels found, skipping");
+    return;
+  }
+
+  const texts = channels.map((c) => `${c.name}: ${c.description}`);
+
+  const binPath = path.join(DATA_DIR, "channels.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
+  const vecs = await embedBatchCached(texts, cache);
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(DATA_DIR, "channels.bm25.json"));
+  writeJson(path.join(DATA_DIR, "channels.index.json"), channels);
+
+  console.log(`  ✓ ${channels.length} Tchap channels embedded`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -774,6 +818,7 @@ async function main() {
   await buildChoisirLeServicePublicEmbeddings(cache);
   await buildMessagerieDocsEmbeddings(cache);
   await buildTchapDocsEmbeddings(cache);
+  await buildTchapChannelsEmbeddings(cache);
 
   saveEmbeddingCache(cache);
   console.log(`  cache: ${cache.size} entries saved`);
