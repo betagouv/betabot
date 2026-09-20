@@ -198,10 +198,14 @@ export class Orchestrator {
     roomId: string;
     threadId?: string;
     text: string;
+    context?: string;
   }): Promise<string> {
     const key = this.getConversationKey(input.roomId, input.threadId);
     const history = this.getHistory(key);
 
+    if (input.context) {
+      history.push({ role: "user", content: input.context });
+    }
     history.push({ role: "user", content: input.text });
     this.trimHistory(history);
 

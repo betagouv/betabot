@@ -711,12 +711,17 @@ export class MatrixConnector {
 
     await this.sendReaction(roomId, userEventId, "🤖");
 
+    const threadContext = relates?.rel_type === "m.thread"
+      ? await this.getThreadContext(roomId, threadRoot)
+      : undefined;
+
     this.orchestrator
       .handle({
         userId: sender,
         roomId,
         threadId: threadRoot,
         text: text || body,
+        context: threadContext,
       })
       .then(async (response) => {
         const replyText =
@@ -798,5 +803,36 @@ export class MatrixConnector {
     }
 
     await this.client.sendEvent(roomId, "m.room.message", content);
+  }
+
+  private async getThreadContext(
+    roomId: string,
+    threadRootId: string,
+  ): Promise<string | undefined> {
+    try {
+      const { chunk } = await this.client.getRelationsForEvent(
+        roomId,
+        threadRootId,
+        "m.thread",
+      );
+      const lines: string[] = [];
+      for (const msg of chunk as Array<Record<string, unknown>>) {
+        if (msg.type !== "m.room.message") continue;
+        const evt = msg as {
+          sender?: string;
+          content?: { msgtype?: string; body?: string };
+        };
+        if (evt.content?.msgtype !== "m.text") continue;
+        if (evt.sender === this.ownUserId) continue;
+        const name = evt.sender?.replace(/^@/, "").split(":")[0] ?? "inconnu";
+        lines.push(`- ${name} : ${evt.content.body}`);
+        if (lines.length >= 20) break;
+      }
+      if (!lines.length) return undefined;
+      return `Voici le fil de discussion existant (pour contexte) :\n${lines.join("\n")}`;
+    } catch (err) {
+      console.error("[Matrix] Failed to read thread context:", err);
+      return undefined;
+    }
   }
 }
