@@ -784,7 +784,11 @@ export class MatrixConnector {
       content["m.relates_to"] = {
         rel_type: "m.thread",
         event_id: threadRootId,
-        "m.in_reply_to": { event_id: replyToEventId ?? threadRootId },
+        // Reply to the thread root rather than the event the user quoted: the
+        // quoted event may itself carry an m.relates_to relation and homeservers
+        // reject starting/continuing a thread from such an event
+        // (M_UNKNOWN "Cannot start threads from an event with a relation").
+        "m.in_reply_to": { event_id: threadRootId },
         is_falling_back: false,
       };
     } else if (replyToEventId) {
