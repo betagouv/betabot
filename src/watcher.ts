@@ -10,8 +10,14 @@ import { reset as incubatorsReset } from "./tools/incubators.js";
 import { reset as proconnectDocsReset } from "./tools/docs-proconnect.js";
 import { reset as franceconnectDocsReset } from "./tools/docs-franceconnect.js";
 import { reset as dsfrDocsReset } from "./tools/docs-dsfr.js";
+import { reset as sqliteReset } from "./tools/sqlite.js";
+import { reset as standardsReset } from "./tools/standards.js";
 
 const FILE_MAP: Record<string, () => void> = {
+  "betabot.db": () => {
+    sqliteReset();
+    standardsReset();
+  },
   "index/members.embeddings.bin":  membersReset,
   "index/members.bm25.json":       membersReset,
   "index/members.json":            membersReset,

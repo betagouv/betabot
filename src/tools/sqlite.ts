@@ -45,6 +45,12 @@ function getDb(): DatabaseSync {
   return _db;
 }
 
+/** Reset the cached connection so the next query re-opens betabot.db. */
+export function reset(): void {
+  _db?.close();
+  _db = null;
+}
+
 async function query_data(sql: string): Promise<unknown> {
   const normalized = sql.trim().replace(/\s+/g, " ").toUpperCase();
   if (!normalized.startsWith("SELECT") && !normalized.startsWith("WITH")) {
