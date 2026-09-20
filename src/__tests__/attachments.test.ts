@@ -4,6 +4,9 @@ import {
   toCsv,
   isReportLike,
   buildReportAttachments,
+  wantsAttachment,
+  wantsReport,
+  wantsDataset,
 } from "../attachments.js";
 
 describe("toCsv", () => {
@@ -63,6 +66,26 @@ describe("isReportLike", () => {
 
   it("returns false for a long paragraph without structure", () => {
     assert.equal(isReportLike("texte ".repeat(200)), false);
+  });
+});
+
+describe("wantsAttachment / wantsReport / wantsDataset", () => {
+  it("returns true when a report is requested", () => {
+    assert.equal(wantsReport("Créer un rapport sur les nouveaux membres"), true);
+    assert.equal(wantsReport("create a report about the new users"), true);
+    assert.equal(wantsAttachment("Créer un rapport sur les nouveaux membres"), true);
+  });
+
+  it("returns true for dataset/csv requests", () => {
+    assert.equal(wantsDataset("exporte ça en csv"), true);
+    assert.equal(wantsDataset("je veux le dataset complet"), true);
+    assert.equal(wantsReport("exporte ça en csv"), false);
+    assert.equal(wantsAttachment("exporte ça en csv"), true);
+  });
+
+  it("returns false for plain questions", () => {
+    assert.equal(wantsAttachment("qui sont les nouveaux membres ?"), false);
+    assert.equal(wantsAttachment("combien de startups sont en construction ?"), false);
   });
 });
 
