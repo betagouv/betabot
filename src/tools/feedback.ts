@@ -12,6 +12,8 @@ export interface ToolContext {
   conversation: ConversationMessage[];
   /** Buffer for files the bot will attach to its response. */
   attachments?: Attachment[];
+  /** Whether the user explicitly asked for a file/dataset/report. */
+  attachmentRequested?: boolean;
 }
 
 interface FeedbackPayload {

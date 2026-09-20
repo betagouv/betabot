@@ -64,8 +64,13 @@ async function query_data(
   try {
     const stmt = getDb().prepare(sql);
     const rows = stmt.all() as Array<Record<string, unknown>>;
-    // Keep the full result for the CSV attachment (no 200-row cap)…
-    if (rows.length && context.attachments) {
+    // Keep the full result for the CSV attachment (no 200-row cap) — only when
+    // the user explicitly asked for a file/dataset.
+    if (
+      rows.length &&
+      context.attachments &&
+      context.attachmentRequested
+    ) {
       const slug = querySlug(sql, rows);
       const attachment: Attachment = {
         filename: `${slug}.csv`,

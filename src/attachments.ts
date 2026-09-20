@@ -45,13 +45,56 @@ function csvScalar(value: unknown): unknown {
 
 // ─── Report attachment helpers ──────────────────────────────────────────────
 
+const REPORT_WORDS = [
+  "rapport",
+  "report",
+  "résumé en fichier",
+  "fichiers joint",
+  "pièce jointe",
+  "document",
+];
+
+const DATASET_WORDS = [
+  "csv",
+  "dataset",
+  "donnée brute",
+  "donnees brutes",
+  "export",
+  "tableur",
+  "spreadsheet",
+  "xlsx",
+];
+
+/**
+ * Whether the user explicitly asks for a report document (.md + .html) to be
+ * attached.
+ */
+export function wantsReport(text: string): boolean {
+  const lower = text.toLowerCase();
+  return REPORT_WORDS.some((w) => lower.includes(w));
+}
+
+/**
+ * Whether the user explicitly asks for a raw dataset (e.g. CSV of a query) to
+ * be attached.
+ */
+export function wantsDataset(text: string): boolean {
+  const lower = text.toLowerCase();
+  return DATASET_WORDS.some((w) => lower.includes(w));
+}
+
+/** Whether the user asked for any file attachment (report and/or dataset). */
+export function wantsAttachment(text: string): boolean {
+  return wantsReport(text) || wantsDataset(text);
+}
+
+/**
+ * Structural heuristic for "this answer is a report worth exporting": long
+ * enough and structured with headings (or a table).
+ */
 const REPORT_MIN_CHARS = 600;
 const REPORT_MIN_HEADINGS = 2;
 
-/**
- * Deterministic "report-like" heuristic: long enough and structured with
- * headings (or a table), i.e. something worth shipping as .md + .html files.
- */
 export function isReportLike(markdown: string): boolean {
   const text = markdown.trim();
   if (text.length < REPORT_MIN_CHARS) return false;
