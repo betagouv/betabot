@@ -5,6 +5,7 @@ import {
   MatrixClient,
   SimpleFsStorageProvider,
   RustSdkCryptoStorageProvider,
+  EncryptedRoomEvent,
 } from "matrix-bot-sdk";
 import { marked } from "marked";
 import { config } from "../config.js";
@@ -811,12 +812,15 @@ export class MatrixConnector {
   ): Promise<string | undefined> {
     try {
       const lines: string[] = [];
+      const encryptedRoom =
+        (await this.client.crypto?.isRoomEncrypted(roomId)) ?? false;
 
       // The m.thread relations endpoint only returns the child replies, never
       // the thread root. Fetch the root event explicitly so the original
       // question (which is often the root message) is always part of the
-      // context passed to the LLM.
-      const root = await this.client.getRawEvent(roomId, threadRootId);
+      // context passed to the LLM. Use getEvent (not getRawEvent) so that the
+      // root is decrypted in E2EE rooms.
+      const root = await this.client.getEvent(roomId, threadRootId);
       if (root.type === "m.room.message") {
         const rootContent = root.content as {
           msgtype?: string;
@@ -834,11 +838,21 @@ export class MatrixConnector {
         threadRootId,
         "m.thread",
       );
-      for (const msg of chunk as Array<Record<string, unknown>>) {
+      for (const rawMsg of chunk as Array<Record<string, unknown>>) {
+        // Relations responses aren't decrypted by the SDK; decrypt each event
+        // in E2EE rooms so the reply bodies are available as context.
+        let msg = rawMsg;
+        if (msg.type === "m.room.encrypted" && encryptedRoom) {
+          const decrypted = await this.client.crypto?.decryptRoomEvent(
+            new EncryptedRoomEvent(msg),
+            roomId,
+          );
+          msg = decrypted?.raw ?? msg;
+        }
         if (msg.type !== "m.room.message") continue;
-        const evt = msg as {
-          sender?: string;
-          content?: { msgtype?: string; body?: string };
+        const evt = {
+          sender: msg.sender as string,
+          content: msg.content as { msgtype?: string; body?: string },
         };
         if (evt.content?.msgtype !== "m.text") continue;
         if (evt.sender === this.ownUserId) continue;
