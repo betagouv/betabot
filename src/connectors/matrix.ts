@@ -845,9 +845,12 @@ export class MatrixConnector {
       const { buffer: encBuffer, file } = await this.client.crypto.encryptMedia(
         buffer,
       );
+      // The uploaded payload is the E2EE-encrypted bytes, not the clear file:
+      // use a neutral content type. The real display MIME stays in
+      // info.mimetype so the client re-labels the decrypted file correctly.
       const url = await this.client.uploadContent(
         encBuffer,
-        attachment.mimeType,
+        "application/octet-stream",
         attachment.filename,
       );
       content.file = { ...file, url };
