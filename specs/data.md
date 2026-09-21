@@ -168,7 +168,7 @@ npm run embed            # skip jobs whose .bin already exists
 npm run embed -- --force # rebuild everything
 ```
 
-Thirteen sequential jobs. Each job:
+Fourteen sequential jobs. Each job:
 
 1. Checks if the output `.bin` exists — skips unless `--force`.
 2. Builds embedding texts from source data.
@@ -385,6 +385,29 @@ Outputs: `data/channels.embeddings.bin`, `data/channels.bm25.json`, `data/channe
 Index entry type: `TchapChannel` — `{ url, name, description }`.
 
 Used at runtime by `findChannels()` (`src/tchap-channels.ts`) with hybrid retrieval; related channels are injected into the system prompt after entity detection so the answer can include direct `[name](url)` links.
+
+### Job 15 — FAQ (authoritative reference answers)
+
+Source: the committed `faq.md` at the **repo root** (source of truth, versioned with the code — **not** under `DATA_DIR`). Parsed with `extractSections` (`src/markdown.ts`). Skipped if the file is missing or contains no question section.
+
+One embedding + BM25 doc per `## Question : …` section. The question is taken from the section breadcrumb (everything after `Question :`), the answer from the `**Réponse :**` block, and the sources from the `**Sources :**` URL list (the first source is also exposed as `url`). The splitting logic (`splitFaqBody`) tolerates the markdown parser stripping `**` emphasis markers.
+
+Outputs: `data/faq/docs.embeddings.bin`, `data/faq/docs.bm25.json`, `data/faq/docs.index.json`
+
+Index entry type:
+
+```ts
+{
+  path: string;       // faq.md path in the repo
+  title: string;      // the FAQ question
+  breadcrumb: string; // same
+  excerpt: string;    // the answer, truncated to 300 chars
+  sources: string[];  // URLs from the **Sources :** block
+  url?: string;       // first source
+}
+```
+
+Used at runtime by `findFaqAnswers()` (`src/faq.ts`) with hybrid retrieval; matching answers are injected into the system prompt as authoritative references, so the LLM can base its answer on them and cite their sources.
 
 ---
 

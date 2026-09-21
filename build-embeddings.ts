@@ -6,6 +6,9 @@ import { buildBM25Index, saveBM25Index } from "./src/search.js";
 import { parseFrontmatter, extractSections } from "./src/markdown.js";
 
 const DATA_DIR = process.env["DATA_DIR"] ?? "./data";
+// faq.md lives at the repo root (committed source of truth), not in DATA_DIR.
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname));
+const FAQ_SOURCE = path.join(REPO_ROOT, "faq.md");
 const FORCE = process.argv.includes("--force");
 
 function computeTextsHash(texts: string[]): string {
@@ -796,6 +799,93 @@ async function buildTchapChannelsEmbeddings(cache: Map<string, number[]>) {
   console.log(`  ✓ ${channels.length} Tchap channels embedded`);
 }
 
+// ─── Job 15: FAQ (authoritative reference answers) ───────────────────────────
+
+interface FaqEntry extends DocChunk {
+  sources: string[];
+}
+
+/**
+ * Builds embedding indexes for the committed faq.md file (repo root). One
+ * embedding + BM25 doc per `## Question : …` section. The answer text is
+ * derived from the `**Réponse :**` block, and the source URL(s) from the
+ * `**Sources :**` list. Outputs land in DATA_DIR/faq/ as docs.embeddings.bin,
+ * docs.bm25.json and docs.index.json. Skips silently when faq.md is missing or
+ * contains no question sections.
+ */
+async function buildFaqEmbeddings(cache: Map<string, number[]>) {
+  console.log("\n[15/15] Building FAQ embeddings…");
+  if (!fs.existsSync(FAQ_SOURCE)) {
+    console.log("  ⚠ faq.md missing, skipping");
+    return;
+  }
+  const raw = fs.readFileSync(FAQ_SOURCE, "utf-8");
+  const sections = extractSections(raw);
+  const entries: FaqEntry[] = [];
+  const texts: string[] = [];
+
+  for (const section of sections) {
+    const m = section.breadcrumb.match(/Question\s*:\s*(.+)/i);
+    if (!m) continue;
+    const question = m[1].trim();
+    const { answer, sources } = splitFaqBody(section.content);
+    if (!answer) continue;
+    entries.push({
+      path: FAQ_SOURCE,
+      title: question,
+      breadcrumb: question,
+      excerpt: excerpt(answer, 300),
+      sources,
+      url: sources[0],
+    });
+    texts.push(`${question}\n${excerpt(answer, 6000)}`);
+  }
+
+  if (entries.length === 0) {
+    console.log("  ⚠ No FAQ question sections found, skipping");
+    return;
+  }
+
+  const outDir = path.join(DATA_DIR, "faq");
+  fs.mkdirSync(outDir, { recursive: true });
+  const binPath = path.join(outDir, "docs.embeddings.bin");
+  if (!needsRebuild(binPath, texts)) return;
+
+  const vecs = await embedBatchCached(texts, cache);
+  saveBin(vecs, binPath);
+  saveHash(binPath, computeTextsHash(texts));
+
+  const bm25 = await buildBM25Index(texts);
+  saveBM25Index(bm25, path.join(outDir, "docs.bm25.json"));
+  writeJson(path.join(outDir, "docs.index.json"), entries);
+
+  console.log(`  ✓ ${entries.length} FAQ entries embedded`);
+}
+
+/**
+ * Splits a FAQ section body (between `**Réponse :**` and the following
+ * `**Sources :**` block) into the authoritative answer text and the list of
+ * source URLs. Returns `{ answer: "", sources: [] }` when the body is missing
+ * the `**Réponse :**` marker.
+ */
+function splitFaqBody(
+  body: string,
+): { answer: string; sources: string[] } {
+  // The markdown parser strips `**` emphasis, so match `Réponse :` / `Sources :`
+  // with optional bold markers on either side.
+  const answerMatch = body.match(
+    /\*{0,2}R[ée]ponse\s*:\*{0,2}\s*([\s\S]*?)(?=\*{0,2}Sources\s*:\*{0,2}|$)/i,
+  );
+  const answer = answerMatch ? answerMatch[1].trim() : "";
+  const sourcesMatch = body.match(
+    /\*{0,2}Sources\s*:\*{0,2}([\s\S]*)$/i,
+  );
+  const sources = sourcesMatch
+    ? (sourcesMatch[1].match(/https?:\/\/[^\s\)\]]+/g) ?? [])
+    : [];
+  return { answer, sources };
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -819,6 +909,7 @@ async function main() {
   await buildMessagerieDocsEmbeddings(cache);
   await buildTchapDocsEmbeddings(cache);
   await buildTchapChannelsEmbeddings(cache);
+  await buildFaqEmbeddings(cache);
 
   saveEmbeddingCache(cache);
   console.log(`  cache: ${cache.size} entries saved`);

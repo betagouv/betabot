@@ -71,6 +71,7 @@ import {
 } from "./tools/feedback.js";
 import { detectEntities, type DetectedEntities } from "./entity-detector.js";
 import { findChannels, type TchapChannel } from "./tchap-channels.js";
+import { findFaqAnswers, type FaqAnswer } from "./faq.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
 import {
   buildReportAttachments,
@@ -82,6 +83,7 @@ import {
 export function buildSystemPrompt(
   entities: DetectedEntities,
   channels: TchapChannel[] = [],
+  faqAnswers: FaqAnswer[] = [],
 ): string {
   const now = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
   const timeContext = `Nous sommes le ${now}.\n\n`;
@@ -106,6 +108,19 @@ export function buildSystemPrompt(
     channels.forEach((c) =>
       lines.push(`  - ${c.name} : ${c.description} ${c.url}`),
     );
+  }
+  if (faqAnswers.length) {
+    lines.push(
+      "Réponses de référence (FAQ) — ce sont des réponses d'autorité : " +
+        "si la question correspond à l'une d'elles, fonde ta réponse dessus et cite ses sources :",
+    );
+    faqAnswers.forEach((f) => {
+      lines.push(`  - ❓ ${f.question}`);
+      lines.push(`    ${f.answer}`);
+      if (f.sources.length) {
+        lines.push(`    Sources : ${f.sources.join(", ")}`);
+      }
+    });
   }
   if (!lines.length) return timeContext + SYSTEM_PROMPT;
   return (
@@ -251,16 +266,24 @@ export class Orchestrator {
           `${startupCount} startup(s) [${detectedEntities.startups.map((e) => e.id).join(", ")}]`,
       );
     }
-    const relatedChannels = await findChannels(input.text);
+    const [relatedChannels, faqAnswers] = await Promise.all([
+      findChannels(input.text),
+      findFaqAnswers(input.text),
+    ]);
     if (relatedChannels.length) {
       debug(
         `tchap channels: [${relatedChannels.map((c) => c.name).join(", ")}]`,
       );
     }
+    if (faqAnswers.length) {
+      debug(
+        `faq answers: [${faqAnswers.map((f) => f.question).join(", ")}]`,
+      );
+    }
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: buildSystemPrompt(detectedEntities, relatedChannels),
+        content: buildSystemPrompt(detectedEntities, relatedChannels, faqAnswers),
       },
       ...history,
     ];
