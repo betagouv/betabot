@@ -11,7 +11,7 @@ export interface TchapChannel {
 }
 
 export interface FindChannelsOpts {
-  /** Maximum number of channels to return. Default 3. */
+  /** Maximum number of distinct channels to return. Default 5. */
   topK?: number;
   /**
    * Minimum relevance ratio: a channel is kept only if its fused score is at
@@ -23,22 +23,29 @@ export interface FindChannelsOpts {
 
 /**
  * Pure selection step: given hybrid-search results ranked by descending fused
- * score, keeps at most `topK` channels whose score is at least `minRatio` × the
- * best score. Extracted for unit-testing — `findChannels` applies it to the
- * live hybrid results.
+ * score, dedupes by `url` (keeping the highest-scoring occurrence, since the
+ * corpus can contain repeated rows) and keeps at most `topK` distinct channels
+ * whose score is at least `minRatio` × the best score. Extracted for
+ * unit-testing — `findChannels` applies it to the live hybrid results.
  */
 export function selectChannels(
   results: Array<TchapChannel & { score: number }>,
   opts: FindChannelsOpts = {},
 ): TchapChannel[] {
-  const topK = opts.topK ?? 3;
+  const topK = opts.topK ?? 5;
   const minRatio = opts.minRatio ?? 0.5;
   if (results.length === 0) return [];
   const best = results[0].score;
-  return results
-    .filter((r) => r.score >= best * minRatio)
-    .slice(0, topK)
-    .map(({ url, name, description }) => ({ url, name, description }));
+  const seen = new Set<string>();
+  const selected: TchapChannel[] = [];
+  for (const r of results) {
+    if (r.score < best * minRatio) continue;
+    if (seen.has(r.url)) continue;
+    seen.add(r.url);
+    selected.push({ url: r.url, name: r.name, description: r.description });
+    if (selected.length >= topK) break;
+  }
+  return selected;
 }
 
 let DATA = config.dataDir;
@@ -75,16 +82,17 @@ async function ensureConfigured(): Promise<void> {
 
 /**
  * Finds Tchap channels related to `query` using hybrid retrieval over the
- * channels built from tchap-channels.json. Returns at most `topK` channels
- * whose fused score is at least `minRatio` × the best score. Returns [] when
- * TCHAP_CHANNELS is unset, empty, or the indexes are missing (development) —
- * never throws, so the orchestrator is never blocked.
+ * channels built from tchap-channels.json. Returns at most `topK` distinct
+ * (deduped by url) channels whose fused score is at least `minRatio` × the
+ * best score. Returns [] when TCHAP_CHANNELS is unset, empty, or the indexes
+ * are missing (development) — never throws, so the orchestrator is never
+ * blocked.
  */
 export async function findChannels(
   query: string,
   opts: FindChannelsOpts = {},
 ): Promise<TchapChannel[]> {
-  const topK = opts.topK ?? 3;
+  const topK = opts.topK ?? 5;
   const minRatio = opts.minRatio ?? 0.5;
 
   try {
