@@ -40,19 +40,34 @@ describe("selectChannels — relevance ratio", () => {
     );
   });
 
-  it("caps results at topK (default 3)", () => {
+  it("caps results at topK (default 5)", () => {
     const results = [
       CHANNEL({ name: "a", score: 1 }),
       CHANNEL({ name: "b", score: 0.9 }),
       CHANNEL({ name: "c", score: 0.8 }),
       CHANNEL({ name: "d", score: 0.7 }),
+      CHANNEL({ name: "e", score: 0.6 }),
+      CHANNEL({ name: "f", score: 0.5 }),
     ];
     const out = selectChannels(results);
-    assert.equal(out.length, 3);
+    assert.equal(out.length, 5);
   });
 
   it("returns empty for empty results", () => {
     assert.deepEqual(selectChannels([]), []);
+  });
+
+  it("dedupes by url, keeping the highest-scoring occurrence", () => {
+    const results = [
+      CHANNEL({ name: "a", url: "https://app.tchap.gouv.fr/#/room/x", score: 1 }),
+      CHANNEL({ name: "a-dup", url: "https://app.tchap.gouv.fr/#/room/x", score: 0.9 }),
+      CHANNEL({ name: "b", url: "https://app.tchap.gouv.fr/#/room/y", score: 0.8 }),
+    ];
+    const out = selectChannels(results);
+    assert.deepEqual(
+      out.map((c) => c.name),
+      ["a", "b"],
+    );
   });
 
   it("respects a custom minRatio", () => {
