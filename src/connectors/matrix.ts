@@ -203,7 +203,7 @@ Je peux t'aider à :
 
 Pose-moi une question ou mentionne-moi dans un salon !
 
-Tes feedbacks sont précieux pour m'améliorer alors n'hésite pas :)
+Tes feedbacks sont précieux pour m'améliorer alors n'hésite pas, je suis encore en version expérimentale :)
 `;
 
 // ─── Verification state ───────────────────────────────────────────────────────
@@ -713,9 +713,10 @@ export class MatrixConnector {
 
     await this.sendReaction(roomId, userEventId, "🤖");
 
-    const threadContext = relates?.rel_type === "m.thread"
-      ? await this.getThreadContext(roomId, threadRoot)
-      : undefined;
+    const threadContext =
+      relates?.rel_type === "m.thread"
+        ? await this.getThreadContext(roomId, threadRoot)
+        : undefined;
 
     this.orchestrator
       .handle({
@@ -842,9 +843,8 @@ export class MatrixConnector {
     const isEncrypted =
       (await this.client.crypto?.isRoomEncrypted(roomId)) ?? false;
     if (isEncrypted && this.client.crypto) {
-      const { buffer: encBuffer, file } = await this.client.crypto.encryptMedia(
-        buffer,
-      );
+      const { buffer: encBuffer, file } =
+        await this.client.crypto.encryptMedia(buffer);
       // The uploaded payload is the E2EE-encrypted bytes, not the clear file:
       // use a neutral content type. The real display MIME stays in
       // info.mimetype so the client re-labels the decrypted file correctly.
@@ -897,9 +897,10 @@ export class MatrixConnector {
           body?: string;
         };
         if (rootContent.msgtype === "m.text") {
-          const name =
-            root.sender.replace(/^@/, "").split(":")[0] ?? "inconnu";
-          lines.push(`- (message initial du fil) ${name} : ${rootContent.body}`);
+          const name = root.sender.replace(/^@/, "").split(":")[0] ?? "inconnu";
+          lines.push(
+            `- (message initial du fil) ${name} : ${rootContent.body}`,
+          );
         }
       }
 

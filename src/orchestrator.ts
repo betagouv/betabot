@@ -276,14 +276,16 @@ export class Orchestrator {
       );
     }
     if (faqAnswers.length) {
-      debug(
-        `faq answers: [${faqAnswers.map((f) => f.question).join(", ")}]`,
-      );
+      debug(`faq answers: [${faqAnswers.map((f) => f.question).join(", ")}]`);
     }
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: buildSystemPrompt(detectedEntities, relatedChannels, faqAnswers),
+        content: buildSystemPrompt(
+          detectedEntities,
+          relatedChannels,
+          faqAnswers,
+        ),
       },
       ...history,
     ];
@@ -369,7 +371,9 @@ export class Orchestrator {
         conversation: history.map((m) => ({
           role: m.role,
           content:
-            typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+            typeof m.content === "string"
+              ? m.content
+              : JSON.stringify(m.content),
         })),
         attachments,
         attachmentRequested: datasetRequested,
