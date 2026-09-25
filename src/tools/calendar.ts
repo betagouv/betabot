@@ -14,6 +14,20 @@ const RRule: typeof import("rrule").RRule | undefined =
 
 const DATA = config.dataDir;
 
+// Renders "HH:MM" of a Date's wall-clock time in Europe/Paris.
+function toParisWallTime(date: Date): { h: number; m: number } {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = Object.fromEntries(
+    dtf.formatToParts(date).map((p) => [p.type, p.value]),
+  );
+  return { h: Number(parts.hour), m: Number(parts.minute) };
+}
+
 // Renders a Date as an ISO-8601 string with the Europe/Paris local time and
 // offset, so consumers of this tool never have to reason about UTC.
 function toParisISOString(date: Date): string {
@@ -47,6 +61,20 @@ function toParisISOString(date: Date): string {
     : "+02:00";
 
   return `${localDate}T${localTime}${offset}`;
+}
+
+// For events anchored in Europe/Paris, rrule expands occurrences at fixed UTC
+// offsets from DTSTART. Across a DST transition the local wall-clock time would
+// drift by an hour (e.g. a weekly "14:00 Paris" stream would become 13:00 after
+// the October change). Re-anchor `occ` so its Paris wall-clock time matches the
+// `anchor` occurrence (the authoring DTSTART). Exported for unit-testing.
+export function keepParisWallClock(occ: Date, anchor: Date): Date {
+  const target = toParisWallTime(anchor);
+  const current = toParisWallTime(occ);
+  const drift =
+    (target.h - current.h) * 60 * 60 * 1000 +
+    (target.m - current.m) * 60 * 1000;
+  return new Date(occ.getTime() + drift);
 }
 
 interface CalendarEvent {
@@ -98,7 +126,16 @@ async function get_calendar(
       const rule = RRule.fromString(
         `DTSTART:${dtstart}\nRRULE:${component.rrule}`,
       );
-      for (const occ of rule.between(from, to, true)) {
+      // For events anchored in Europe/Paris, rrule expands occurrences at fixed
+      // UTC offsets from DTSTART. Across a DST transition the local wall-clock
+      // time would drift by an hour (e.g. a weekly "14:00 Paris" stream would
+      // become 13:00 after the October change). Re-anchor each occurrence so
+      // the wall-clock time stays identical to the authoring DTSTART.
+      const isParis = (component.start as { tz?: string } | undefined)?.tz === "Europe/Paris";
+      for (let occ of rule.between(from, to, true)) {
+        if (isParis) {
+          occ = keepParisWallClock(occ, start);
+        }
         events.push({
           ...baseFields,
           start: toParisISOString(occ),
