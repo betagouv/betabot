@@ -63,6 +63,47 @@ function toParisISOString(date: Date): string {
   return `${localDate}T${localTime}${offset}`;
 }
 
+// The `ical` library parses `DTSTART;TZID=Europe/Paris:...` by treating the
+// authored wall-clock as a *host-local* time. On a UTC host (the runtime runs
+// node:24-slim with TZ=UTC), that mangles the instant by the Paris offset, so a
+// 14:00 Paris event is mis-read as 14:00Z and later rendered as 16:00 Paris.
+// `parisWallToUtc` rebuilds the correct absolute instant from the authored Paris
+// wall-clock, using `Intl` which resolves Europe/Paris regardless of host TZ.
+function parisOffsetMinutesAtInstant(d: Date): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Paris",
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(d)
+      .map((p) => [p.type, p.value]),
+  );
+  const m = (parts.timeZoneName ?? "").match(/GMT([+-])(\d+)(?::(\d+))?/);
+  if (!m) return 120;
+  return (parseInt(m[2]) * 60 + parseInt(m[3] || "0")) * (m[1] === "+" ? 1 : -1);
+}
+
+// Convert a Date whose local components are an authored Europe/Paris wall-clock
+// time into the correct absolute UTC instant. Exported for unit-testing.
+export function parisWallToUtc(wall: Date): Date {
+  const y = wall.getFullYear();
+  const mo = wall.getMonth();
+  const d = wall.getDate();
+  const h = wall.getHours();
+  const mi = wall.getMinutes();
+  const sec = wall.getSeconds();
+  const asUtc = Date.UTC(y, mo, d, h, mi, sec);
+  let approx = new Date(asUtc);
+  for (let i = 0; i < 4; i++) {
+    const off = parisOffsetMinutesAtInstant(approx);
+    const cand = new Date(asUtc - off * 60 * 1000);
+    const w = toParisWallTime(cand);
+    if (w.h === h && w.m === mi) return cand;
+    approx = cand;
+  }
+  return approx;
+}
+
 // For events anchored in Europe/Paris, rrule expands occurrences at fixed UTC
 // offsets from DTSTART. Across a DST transition the local wall-clock time would
 // drift by an hour (e.g. a weekly "14:00 Paris" stream would become 13:00 after
@@ -104,10 +145,21 @@ async function get_calendar(
   for (const [, component] of Object.entries(parsed)) {
     if (component.type !== "VEVENT") continue;
 
-    const start = component.start ? new Date(component.start) : null;
-    const end = component.end ? new Date(component.end) : null;
+    const isParisEvent =
+      (component.start as { tz?: string } | undefined)?.tz === "Europe/Paris";
+
+    let start = component.start ? new Date(component.start) : null;
+    let end = component.end ? new Date(component.end) : null;
 
     if (!start) continue;
+
+    // Rebuild the correct absolute instants from the authored Paris wall-clock
+    // (the ical Date's local components) — see parisWallToUtc above. Without
+    // this, TZID events are mis-rendered by the Paris offset on UTC hosts.
+    if (isParisEvent) {
+      start = parisWallToUtc(start);
+      end = end ? parisWallToUtc(end) : null;
+    }
 
     const baseFields = {
       summary: component.summary ?? "(sans titre)",
@@ -131,9 +183,8 @@ async function get_calendar(
       // time would drift by an hour (e.g. a weekly "14:00 Paris" stream would
       // become 13:00 after the October change). Re-anchor each occurrence so
       // the wall-clock time stays identical to the authoring DTSTART.
-      const isParis = (component.start as { tz?: string } | undefined)?.tz === "Europe/Paris";
       for (let occ of rule.between(from, to, true)) {
-        if (isParis) {
+        if (isParisEvent) {
           occ = keepParisWallClock(occ, start);
         }
         events.push({
