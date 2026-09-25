@@ -147,6 +147,21 @@ Each channel's pages are merged and reshaped with `jq` into the same `{items: [.
 
 `data/calendar.ics` — beta.gouv.fr community Google Calendar, public ICS feed.
 
+Times are rendered in `Europe/Paris`. Because the feed mixes `TZID=Europe/Paris`
+(floating wall-clock) and UTC (`...Z`) timestamps, the tool (`src/tools/calendar.ts`):
+
+- converts every event to a proper UTC instant, then renders via
+  `toParisISOString` (explicit `Europe/Paris` formatting).
+- for **recurring** `TZID=Europe/Paris` events, re-anchors each occurrence so its
+  Paris wall-clock time stays identical to the authoring `DTSTART`
+  (`keepParisWallClock`). Without this, `rrule`'s fixed-UTC expansion would drift
+  by one hour after the late-October DST transition (e.g. a weekly 14:00 stream
+  would become 13:00).
+
+Note: the upstream feed occasionally contains **duplicate** events (the same
+forum appears once in UTC ending 17:00 and once in TZID ending 17:30). That is a
+source-data issue, not handled in code.
+
 ### Index derivation (jq, inline)
 
 Run at the end of `get-data.sh` before the bot can embed.
